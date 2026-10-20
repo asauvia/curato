@@ -48,3 +48,6 @@ app.*.map.json
 # FVM Version Cache
 
 /build/reports/
+
+# Keep the committed template
+!.env.example

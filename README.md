@@ -77,17 +77,11 @@ flutter run -d chrome
 flutter analyze
 ```
 
-The storefront reads its Firebase web configuration from build-time defines, so it is never stored in the source. Pass the values for your Firebase project:
+The storefront reads its Firebase web configuration from a local `.env` file, which is git-ignored. Copy the template and fill in the values for your Firebase project:
 
 ```bash
-flutter run -d chrome \
-  --dart-define=FIREBASE_API_KEY=... \
-  --dart-define=FIREBASE_AUTH_DOMAIN=... \
-  --dart-define=FIREBASE_PROJECT_ID=... \
-  --dart-define=FIREBASE_STORAGE_BUCKET=... \
-  --dart-define=FIREBASE_MESSAGING_SENDER_ID=... \
-  --dart-define=FIREBASE_APP_ID=... \
-  --dart-define=FIREBASE_MEASUREMENT_ID=...
+cp curato-ecom/.env.example curato-ecom/.env
+flutter run -d chrome --dart-define-from-file=.env
 ```
 
 Without `FIREBASE_API_KEY`, the storefront starts and logs a message, but Firebase sign-in will not work.
@@ -101,7 +95,7 @@ Without `FIREBASE_API_KEY`, the storefront starts and logs a message, but Fireba
 
 ## Known gaps before production
 
-- Firebase: Curato needs its own Firebase project. Create it, then set the `FIREBASE_*` values for the storefront and the backend `.env`. The previous Firebase project is no longer referenced in the code.
+- Firebase: Curato needs its own Firebase project. Create it, then fill in `curato-ecom/.env` (from `.env.example`) and the Firebase values in the backend `.env`. The previous Firebase project is no longer referenced in the code.
 - `curato-ecom/web/index.html` lists social-media links that still use the previous brand's handles. Update them to the real accounts or remove them.
 - Android and iOS bundle IDs are `com.asauvia.curato.user`, `com.asauvia.curato.admin` and `com.asauvia.curato.vendor`. Existing installs of the previous app will not update to these IDs.
 - There is no automated test suite. The backend `npm test` script is a placeholder, and the Flutter apps still contain the default counter widget test, which does not match the apps.
