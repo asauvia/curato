@@ -1,0 +1,292 @@
+// import 'package:flutter/material.dart';
+// import 'package:google_fonts/google_fonts.dart';
+
+// class HeroSideBanner extends StatelessWidget {
+//   final String title;
+//   final String subtitle;
+//   final String imageUrl;
+//   final String badgeText;
+//   final Color badgeColor;
+
+//   const HeroSideBanner({
+//     super.key,
+//     required this.title,
+//     required this.subtitle,
+//     required this.imageUrl,
+//     required this.badgeText,
+//     required this.badgeColor,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final bool isMobile = MediaQuery.of(context).size.width < 768;
+
+//     return InkWell(
+//       onTap: () => Navigator.pushNamed(context, '/shop'),
+//       child: Container(
+//         decoration: BoxDecoration(
+//           borderRadius: BorderRadius.circular(8),
+//           image: DecorationImage(
+//             image: (imageUrl.isNotEmpty && imageUrl.startsWith('http'))
+//                 ? NetworkImage(imageUrl) as ImageProvider
+//                 : AssetImage(imageUrl.isEmpty ? 'assets/images/colorful_pillows_promo.png' : imageUrl),
+//             fit: BoxFit.cover,
+//           ),
+//         ),
+//         child: Container(
+//           padding: EdgeInsets.all(isMobile ? 16 : 24),
+//           decoration: BoxDecoration(
+//             borderRadius: BorderRadius.circular(8),
+//             gradient: LinearGradient(
+//               begin: isMobile ? Alignment.centerLeft : Alignment.bottomCenter,
+//               end: isMobile ? Alignment.centerRight : Alignment.topCenter,
+//               colors: [
+//                 AppColors.black.withOpacity(0.8),
+//                 AppColors.black.withOpacity(0.4),
+//                 AppColors.transparent,
+//               ],
+//             ),
+//           ),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             mainAxisAlignment: isMobile ? MainAxisAlignment.center : MainAxisAlignment.end,
+//             children: [
+//               Wrap(
+//                 spacing: 8,
+//                 runSpacing: 4,
+//                 crossAxisAlignment: WrapCrossAlignment.center,
+//                 children: [
+//                   Container(
+//                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+//                     decoration: BoxDecoration(
+//                       color: badgeColor,
+//                       borderRadius: BorderRadius.circular(4),
+//                     ),
+//                     child: Row(
+//                       mainAxisSize: MainAxisSize.min,
+//                       children: [
+//                         const Icon(Icons.flash_on, color: AppColors.white, size: 12),
+//                         const SizedBox(width: 4),
+//                         Text(
+//                           badgeText.toUpperCase(),
+//                           style: const TextStyle(
+//                             color: AppColors.white,
+//                             fontWeight: FontWeight.bold,
+//                             fontSize: 10,
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               const SizedBox(height: 12),
+//               Flexible(
+//                 child: Text(
+//                   title,
+//                   maxLines: 2,
+//                   overflow: TextOverflow.ellipsis,
+//                   style: GoogleFonts.instrumentSans(
+//                     color: AppColors.white,
+//                     fontSize: 16, // Reduced from 18 for better fitting
+//                     fontWeight: FontWeight.bold,
+//                   ),
+//                 ),
+//               ),
+//               const SizedBox(height: 4),
+//               Flexible(
+//                 child: Text(
+//                   subtitle,
+//                   maxLines: 1,
+//                   overflow: TextOverflow.ellipsis,
+//                   style: GoogleFonts.instrumentSans(color: AppColors.white70, fontSize: 13),
+//                 ),
+//               ),
+//               const SizedBox(height: 12),
+//               if (isMobile)
+//                 Container(
+//                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+//                   decoration: BoxDecoration(
+//                     color: AppColors.primaryPink,
+//                     borderRadius: BorderRadius.circular(6),
+//                   ),
+//                   child: Text(
+//                     'SHOP NOW',
+//                     style: GoogleFonts.instrumentSans(
+//                       color: AppColors.white,
+//                       fontSize: 11,
+//                       fontWeight: FontWeight.bold,
+//                     ),
+//                   ),
+//                 )
+//               else
+//                 Row(
+//                   mainAxisSize: MainAxisSize.min,
+//                   children: [
+//                     Text(
+//                       'Shop now',
+//                       style: GoogleFonts.instrumentSans(
+//                         color: AppColors.white,
+//                         fontSize: 13,
+//                         fontWeight: FontWeight.bold,
+//                       ),
+//                     ),
+//                     const Icon(Icons.chevron_right, color: AppColors.white, size: 16),
+//                   ],
+//                 ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+import 'package:curato_user/core/constants/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class HeroSideBanner extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String imageUrl;
+  final String badgeText;
+  final Color badgeColor;
+  final String link;
+
+  const HeroSideBanner({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.badgeText,
+    required this.badgeColor,
+    this.link = '',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    final bool isMobile = screenWidth < 768;
+    final bool hasLink = link.isNotEmpty && link != '/' && link != '#';
+
+    Widget mainContent = Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        minHeight: isMobile ? 220 : 320,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        image: DecorationImage(
+          image: (imageUrl.isNotEmpty && imageUrl.startsWith('http'))
+              ? NetworkImage(imageUrl) as ImageProvider
+              : AssetImage(
+                  imageUrl.isEmpty
+                      ? 'assets/images/colorful_pillows_promo.png'
+                      : imageUrl,
+                ),
+          fit: BoxFit.fill,
+        ),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment:
+              isMobile ? MainAxisAlignment.center : MainAxisAlignment.end,
+          children: [
+            /// BADGE
+            if (badgeText.trim().isNotEmpty) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.flash_on,
+                          color: AppColors.white,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          badgeText.toUpperCase(),
+                          style: GoogleFonts.jetBrainsMono(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isMobile ? 14 : 18),
+            ],
+
+            /// TITLE
+            Text(
+              title,
+              maxLines: isMobile ? 2 : 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.instrumentSans(
+                color: AppColors.white,
+                fontSize: isMobile ? 20 : 25,
+                fontWeight: FontWeight.w400, letterSpacing: -0.5,
+                height: 1.2,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            /// SUBTITLE
+            Text(
+              subtitle,
+              maxLines: isMobile ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.instrumentSans(
+                color: AppColors.white70,
+                fontSize: isMobile ? 13 : 15,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (hasLink) {
+      return InkWell(
+        onTap: () => Navigator.pushNamed(context, link),
+        borderRadius: BorderRadius.circular(8),
+        child: mainContent,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: mainContent,
+    );
+  }
+}

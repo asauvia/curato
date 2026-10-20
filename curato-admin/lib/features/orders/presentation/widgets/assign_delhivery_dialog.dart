@@ -1,0 +1,386 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'package:curato_admin/core/constants/app_colors.dart';
+
+class AssignDelhiveryDialog extends StatefulWidget {
+  final Map<String, dynamic> order;
+  final Function(Map<String, dynamic>) onConfirm;
+
+  const AssignDelhiveryDialog({
+    super.key,
+    required this.order,
+    required this.onConfirm,
+  });
+
+  @override
+  State<AssignDelhiveryDialog> createState() => _AssignDelhiveryDialogState();
+}
+
+class _AssignDelhiveryDialogState extends State<AssignDelhiveryDialog> {
+  late TextEditingController pickupNameController;
+  late TextEditingController pickupAddressController;
+  late TextEditingController pickupCityController;
+  late TextEditingController pickupPinController;
+  late TextEditingController pickupPhoneController;
+
+  late TextEditingController shippingNameController;
+  late TextEditingController shippingAddressController;
+  late TextEditingController shippingCityController;
+  late TextEditingController shippingPinController;
+  late TextEditingController shippingPhoneController;
+
+  late TextEditingController weightController;
+  late TextEditingController lengthController;
+  late TextEditingController breadthController;
+  late TextEditingController heightController;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final vendor = widget.order['vendor'] ?? {};
+    final vendorProfile = vendor['vendorProfile'] ?? vendor; // Try both structures
+    final shipping = widget.order['shippingAddress'] ?? {};
+    final user = widget.order['user'] ?? {};
+    final pd = widget.order['pickupDetails'] ?? {};
+    final dim = pd['dimensions'] ?? {};
+
+    // Default Pickup from Vendor Profile/User
+    pickupNameController = TextEditingController(
+      text: vendorProfile['businessName'] ?? vendor['shopName'] ?? vendor['name'] ?? ''
+    );
+    
+    // Construct full address string
+    final addr = vendorProfile['address'] ?? {};
+    final street = addr['street'] ?? vendor['address'] ?? '';
+    final city = addr['city'] ?? '';
+    final state = addr['state'] ?? '';
+    
+    pickupAddressController = TextEditingController(text: street);
+    pickupCityController = TextEditingController(text: city);
+    pickupPinController = TextEditingController(text: addr['zipCode']?.toString() ?? '');
+    pickupPhoneController = TextEditingController(text: vendor['mobile']?.toString() ?? '');
+
+    // Default Shipping from Order
+    shippingNameController = TextEditingController(text: user['name'] ?? '');
+    final shippingParts = [
+      shipping['buildingName'],
+      shipping['street'],
+      shipping['area'],
+      shipping['landmark'],
+    ].where((e) => e != null && e.toString().trim().isNotEmpty).toList();
+    shippingAddressController = TextEditingController(
+      text: shippingParts.isNotEmpty ? shippingParts.join(', ') : ''
+    );
+    shippingCityController = TextEditingController(text: shipping['city'] ?? '');
+    shippingPinController = TextEditingController(text: shipping['zipCode']?.toString() ?? '');
+    shippingPhoneController = TextEditingController(text: user['mobile']?.toString() ?? '');
+
+    // Default Dimensions from Order/Vendor Submission
+    weightController = TextEditingController(text: (pd['weight'] ?? '0.5').toString());
+    lengthController = TextEditingController(text: (dim['length'] ?? '10').toString());
+    breadthController = TextEditingController(text: (dim['width'] ?? dim['breadth'] ?? '10').toString());
+    heightController = TextEditingController(text: (dim['height'] ?? '10').toString());
+  }
+
+  @override
+  void dispose() {
+    pickupNameController.dispose();
+    pickupAddressController.dispose();
+    pickupCityController.dispose();
+    pickupPinController.dispose();
+    pickupPhoneController.dispose();
+    shippingNameController.dispose();
+    shippingAddressController.dispose();
+    shippingCityController.dispose();
+    shippingPinController.dispose();
+    shippingPhoneController.dispose();
+    weightController.dispose();
+    lengthController.dispose();
+    breadthController.dispose();
+    heightController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Container(
+        width: 600,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.foreground, AppColors.mutedForeground],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_shipping_rounded, color: AppColors.background, size: 28),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Assign Delhivery Shipment',
+                      style: GoogleFonts.instrumentSans(
+                        color: AppColors.background,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: AppColors.background),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader('Pickup Details (From Warehouse)'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('Warehouse Name', pickupNameController, Icons.store)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Phone', pickupPhoneController, Icons.phone)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField('Street Address', pickupAddressController, Icons.location_on),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('City', pickupCityController, Icons.location_city)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Pincode', pickupPinController, Icons.pin_drop)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('Delivery Details (To Customer)'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('Customer Name', shippingNameController, Icons.person)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Phone', shippingPhoneController, Icons.phone_android)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField('Street Address', shippingAddressController, Icons.home),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('City', shippingCityController, Icons.location_city)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Pincode', shippingPinController, Icons.mark_as_unread_sharp)),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('Package Dimensions'),
+                    if (widget.order['pickupDetails']?['dimensionsList'] != null && (widget.order['pickupDetails']['dimensionsList'] as List).length > 1) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '📦 Vendor submitted ${(widget.order['pickupDetails']['dimensionsList'] as List).length} parcels:',
+                              style: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue.shade900),
+                            ),
+                            const SizedBox(height: 4),
+                            ...(widget.order['pickupDetails']['dimensionsList'] as List).asMap().entries.map((entry) {
+                              final i = entry.key + 1;
+                              final item = entry.value;
+                              return Text(
+                                'Parcel #$i: ${item['length']} × ${item['width']} × ${item['height']} cm',
+                                style: GoogleFonts.instrumentSans(fontSize: 12, color: Colors.blue.shade800),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('Weight (kg)', weightController, Icons.scale)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Length (cm)', lengthController, Icons.square_foot)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('Width (cm)', breadthController, Icons.square_foot)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Height (cm)', heightController, Icons.square_foot)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Footer
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.muted,
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.instrumentSans(color: AppColors.mutedForeground, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    isLoading
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 40),
+                            child: CircularProgressIndicator(),
+                          )
+                        : ElevatedButton(
+                            onPressed: () async {
+                              final parsedWeight = double.tryParse(weightController.text) ?? 0.5;
+                              if (parsedWeight <= 0 || parsedWeight > 25) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Parcel weight must be greater than 0 and cannot exceed 25 kg'), backgroundColor: Colors.red),
+                                );
+                                return;
+                              }
+                              setState(() => isLoading = true);
+                              try {
+                                final data = {
+                                  'customShipping': {
+                                    'name': shippingNameController.text,
+                                    'add': shippingAddressController.text,
+                                    'city': shippingCityController.text,
+                                    'pin': shippingPinController.text,
+                                    'phone': shippingPhoneController.text,
+                                  },
+                                  'dimensions': {
+                                    'weight': double.tryParse(weightController.text) ?? 0.5,
+                                    'length': double.tryParse(lengthController.text) ?? 10,
+                                    'breadth': double.tryParse(breadthController.text) ?? 10,
+                                    'height': double.tryParse(heightController.text) ?? 10,
+                                  }
+                                };
+                                await widget.onConfirm(data);
+                                if (mounted) Navigator.pop(context);
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => isLoading = false);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.foreground,
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              shape: StadiumBorder(),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Confirm Shipment',
+                              style: GoogleFonts.instrumentSans(color: AppColors.background, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.instrumentSans(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppColors.foreground,
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.mutedForeground,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, size: 20, color: AppColors.mutedForeground),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.foreground, width: 2),
+            ),
+            fillColor: AppColors.muted,
+            filled: true,
+          ),
+          style: GoogleFonts.instrumentSans(fontSize: 14),
+        ),
+      ],
+    );
+  }
+}

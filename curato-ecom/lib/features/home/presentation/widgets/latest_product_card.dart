@@ -1,0 +1,283 @@
+import 'package:curato_user/core/constants/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_user/core/controllers/wishlist_controller.dart';
+import 'package:curato_user/features/home/domain/models/product_model.dart';
+import 'package:curato_user/core/services/session_service.dart';
+import 'package:curato_user/features/cart/application/cart_controller.dart';
+import 'package:curato_user/features/home/presentation/widgets/cart_drawer.dart';
+import 'package:curato_user/core/utils/url_helper.dart';
+
+class LatestProductCard extends StatefulWidget {
+  final ProductModel product;
+  final double rating;
+  final int ratingCount;
+  final bool hasBestSellerBadge;
+  final VoidCallback? onAddToCart;
+
+  const LatestProductCard({
+    super.key,
+    required this.product,
+    this.rating = 4.0,
+    this.ratingCount = 100,
+    this.hasBestSellerBadge = false,
+    this.onAddToCart,
+  });
+
+  @override
+  State<LatestProductCard> createState() => _LatestProductCardState();
+}
+
+class _LatestProductCardState extends State<LatestProductCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: WishlistController.instance,
+      builder: (context, _) {
+        final bool isWishlisted = WishlistController.instance.isWishlisted(widget.product.id);
+        
+        return GestureDetector(
+          onTap: () {
+            final route = UrlHelper.productUrl(widget.product);
+            Navigator.pushNamed(context, route, arguments: widget.product);
+          },
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _isHovered = true),
+            onExit: (_) => setState(() => _isHovered = false),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _isHovered ? AppColors.foreground : AppColors.grey200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image area
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                          child: Image.network(
+                            widget.product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, _, __) => const Center(
+                              child: Icon(Icons.image_not_supported_outlined, size: 40, color: AppColors.grey),
+                            ),
+                          ),
+                        ),
+                        if (widget.hasBestSellerBadge)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.foreground,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'BEST\nSELLER',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.instrumentSans(
+                                  color: AppColors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        // Wishlist Heart
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () {
+                              final productMap = {
+                                '_id': widget.product.id,
+                                'name': widget.product.name,
+                                'price': widget.product.price,
+                                'images': [widget.product.imageUrl],
+                              };
+                              WishlistController.instance.toggleWishlist(productMap);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withOpacity(0.9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isWishlisted ? Icons.favorite : Icons.favorite_border,
+                                size: 16,
+                                color: isWishlisted ? AppColors.primaryPink : AppColors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Details
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.product.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.foreground,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                '₹${widget.product.price.ceil()}',
+                                style: GoogleFonts.instrumentSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.foreground,
+                                ),
+                              ),
+                              if (widget.product.oldPrice != null) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '₹${widget.product.oldPrice!.ceil()}',
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 11,
+                                    color: AppColors.mrpBrown,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 12,
+                                    color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.errorRed,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    (widget.product.available ?? 0) > 0 ? 'In Stock' : 'Out of Stock',
+                                    style: GoogleFonts.instrumentSans(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.errorRed,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (widget.product.moq > 1)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.blue50,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.blue200),
+                                  ),
+                                  child: Text(
+                                    'MOQ: ${widget.product.moq}',
+                                    style: GoogleFonts.instrumentSans(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.blue700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          _StarRating(rating: widget.rating),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                if (!SessionService.instance.isLoggedIn) {
+                                  CartController.instance.setPendingItem(widget.product.id, widget.product.moq);
+                                  Navigator.pushNamed(context, '/login');
+                                  return;
+                                }
+                                if (widget.onAddToCart != null) {
+                                  widget.onAddToCart!();
+                                } else {
+                                  final success = await CartController.instance.addToCart(
+                                    widget.product.id,
+                                    quantity: widget.product.moq,
+                                    moq: widget.product.moq,
+                                  );
+                                  if (context.mounted && success) {
+                                    CartDrawer.showSlider(context, addedProductName: widget.product.name);
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.shopping_cart_outlined, size: 14),
+                              label: Text('Add to Cart',
+                                  style: GoogleFonts.instrumentSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.foreground,
+                                foregroundColor: AppColors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: const StadiumBorder(),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+      },
+    );
+  }
+}
+
+class _StarRating extends StatelessWidget {
+  final double rating;
+
+  const _StarRating({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(5, (index) {
+        final full = index < rating.floor();
+        final half = !full && index < rating;
+        return Icon(
+          full ? Icons.star : (half ? Icons.star_half : Icons.star_border),
+          color: AppColors.foreground,
+          size: 14,
+        );
+      }),
+    );
+  }
+}

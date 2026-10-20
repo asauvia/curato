@@ -1,0 +1,160 @@
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { Toaster } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { Layout } from "@/components/Layout";
+import { useGetResellerProfile, logoutReseller } from "@/api-client";
+
+import Login from "@/pages/Login";
+import Dashboard from "@/pages/Dashboard";
+import Products from "@/pages/Products";
+import MyProducts from "@/pages/MyProducts";
+// import Collections from "@/pages/Collections";
+import Referrals from "@/pages/Referrals";
+import Orders from "@/pages/Orders";
+import Wallet from "@/pages/Wallet";
+import Withdrawals from "@/pages/Withdrawals";
+import Analytics from "@/pages/Analytics";
+import Profile from "@/pages/Profile";
+import Register from "@/pages/Register";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+// import AdminResellers from "@/pages/admin/AdminResellers";
+// import AdminResellerDetail from "@/pages/admin/AdminResellerDetail";
+import AdminWithdrawals from "@/pages/admin/AdminWithdrawals";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+// import AdminTopResellers from "@/pages/admin/AdminTopResellers";
+import VendorOrders from "@/pages/vendor/VendorOrders";
+import AdminTopResellers from "./pages/admin/AdminTopInfluencers";
+import AdminResellerDetail from "./pages/admin/AdminInfluencerDetail";
+import AdminResellers from "./pages/admin/AdminInfluencers";
+import Collections from "./pages/Collections";
+
+function PendingScreen({ status }: { status: string }) {
+  const qc = useQueryClient();
+  const handleLogout = async () => {
+    try {
+      await logoutReseller();
+      qc.clear();
+      localStorage.removeItem("auth_token");
+      window.location.href = "/login";
+    } catch (e) {
+      console.error(e);
+      localStorage.removeItem("auth_token");
+      window.location.href = "/login";
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md bg-background rounded-2xl p-8 border border-border shadow-2xl text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted text-foreground mb-6 border border-border">
+          <svg className="w-8 h-8 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1 className="text-foreground font-normal tracking-tight text-2xl mb-3">Application Pending</h1>
+        <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+          Your reseller application status is currently <span className="text-foreground font-semibold uppercase">{status}</span>. 
+          Our administration is reviewing your registration details. You will get full platform access once approved.
+        </p>
+        <button
+          onClick={handleLogout}
+          className="w-full border border-border bg-background hover:bg-muted text-foreground font-semibold py-2.5 rounded-full transition-all text-sm"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ component: Component, roles }: { component: React.ComponentType; roles?: string[] }) {
+  const { user, isLoading: isAuthLoading, isAuthenticated, role } = useAuth();
+  const { data: profile, isLoading: isProfileLoading } = useGetResellerProfile({
+    query: {
+      enabled: isAuthenticated && (role === "Reseller" || role === "reseller"),
+    } as any
+  });
+
+  if (isAuthLoading || (isAuthenticated && (role === "Reseller" || role === "reseller") && isProfileLoading)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="w-8 h-8 border-3 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return <Redirect to="/login" />;
+  if (roles && role && !roles.includes(role)) return <Redirect to={role === "admin" ? "/admin" : role === "vendor" ? "/vendor/orders" : "/dashboard"} />;
+
+  if (role === "Reseller" || role === "reseller") {
+    const status = profile?.status?.toLowerCase();
+    if (status && status !== "approved" && status !== "active") {
+      return <PendingScreen status={profile?.status || "pending"} />;
+    }
+  }
+
+  return <Layout><Component /></Layout>;
+}
+
+function PublicRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading, role } = useAuth();
+  if (isLoading) return null;
+  if (isAuthenticated) {
+    if (role === "admin") return <Redirect to="/admin" />;
+    if (role === "vendor") return <Redirect to="/vendor/orders" />;
+    return <Redirect to="/dashboard" />;
+  }
+  return <Component />;
+}
+
+function Router() {
+  return (
+    <Switch>
+      {/* Public routes */}
+      <Route path="/login" component={() => <PublicRoute component={Login} />} />
+      <Route path="/register" component={() => <PublicRoute component={Register} />} />
+
+      {/* Reseller/Reseller routes */}
+      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} roles={["Reseller", "reseller"]} />} />
+      <Route path="/products" component={() => <ProtectedRoute component={Products} roles={["Reseller", "reseller"]} />} />
+      <Route path="/my-products" component={() => <ProtectedRoute component={MyProducts} roles={["Reseller", "reseller"]} />} />
+      <Route path="/collections" component={() => <ProtectedRoute component={Collections} roles={["Reseller", "reseller"]} />} />
+      <Route path="/referrals" component={() => <ProtectedRoute component={Referrals} roles={["Reseller", "reseller"]} />} />
+      <Route path="/orders" component={() => <ProtectedRoute component={Orders} roles={["Reseller", "reseller"]} />} />
+      <Route path="/wallet" component={() => <ProtectedRoute component={Wallet} roles={["Reseller", "reseller"]} />} />
+      <Route path="/withdrawals" component={() => <ProtectedRoute component={Withdrawals} roles={["Reseller", "reseller"]} />} />
+      <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} roles={["Reseller", "reseller"]} />} />
+      <Route path="/profile" component={() => <ProtectedRoute component={Profile} roles={["Reseller", "reseller"]} />} />
+
+      {/* Admin routes */}
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} roles={["admin"]} />} />
+      <Route path="/admin/Resellers/:id" component={() => <ProtectedRoute component={AdminResellerDetail} roles={["admin"]} />} />
+      <Route path="/admin/Resellers" component={() => <ProtectedRoute component={AdminResellers} roles={["admin"]} />} />
+      <Route path="/admin/withdrawals" component={() => <ProtectedRoute component={AdminWithdrawals} roles={["admin"]} />} />
+      <Route path="/admin/analytics" component={() => <ProtectedRoute component={AdminAnalytics} roles={["admin"]} />} />
+      <Route path="/admin/top-Resellers" component={() => <ProtectedRoute component={AdminTopResellers} roles={["admin"]} />} />
+
+      {/* Vendor routes */}
+      <Route path="/vendor/orders" component={() => <ProtectedRoute component={VendorOrders} roles={["vendor"]} />} />
+
+      {/* Default redirect */}
+      <Route path="/" component={() => <Redirect to="/login" />} />
+      <Route component={() => <Redirect to="/login" />} />
+    </Switch>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <Router />
+      </WouterRouter>
+      <Toaster position="top-right" />
+    </QueryClientProvider>
+  );
+}
+
+export default App;

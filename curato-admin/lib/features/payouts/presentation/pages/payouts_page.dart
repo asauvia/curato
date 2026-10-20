@@ -1,0 +1,687 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_admin/core/constants/app_colors.dart';
+
+import 'package:curato_admin/core/services/api_service.dart';
+import 'package:curato_admin/features/layout/presentation/widgets/sidebar.dart';
+import 'package:curato_admin/features/layout/presentation/widgets/top_bar.dart';
+import 'package:dio/dio.dart';
+import 'package:curato_admin/core/services/service_locator.dart';
+import 'package:curato_admin/features/vendors/data/services/vendor_service.dart';
+import 'package:intl/intl.dart';
+import 'package:curato_admin/core/services/download_helper.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+class PayoutsPage extends StatefulWidget {
+  const PayoutsPage({super.key});
+
+  @override
+  State<PayoutsPage> createState() => _PayoutsPageState();
+}
+
+class _PayoutsPageState extends State<PayoutsPage> {
+  List<dynamic> payouts = [];
+  List<dynamic> resellerPayouts = [];
+  bool isLoading = true;
+  bool isResellerLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPayouts();
+    fetchResellerPayouts();
+  }
+
+  Future<void> fetchPayouts() async {
+    setState(() => isLoading = true);
+    try {
+      final res = await ApiService().dio.get('/admin/payouts');
+      setState(() {
+        payouts = res.data['data'];
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching payouts: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> fetchResellerPayouts() async {
+    setState(() => isResellerLoading = true);
+    try {
+      final res = await ApiService().dio.get('/admin/reseller/withdrawals');
+      setState(() {
+        resellerPayouts = res.data;
+        isResellerLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching reseller payouts: $e');
+      setState(() => isResellerLoading = false);
+    }
+  }
+
+  Future<void> updateStatus(String id, String action, {Map<String, dynamic>? extraData}) async {
+    try {
+      String endpoint = '/admin/payout/$id/$action';
+      final res = await ApiService().dio.put(endpoint, data: extraData);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.data['message'] ?? "Status updated")));
+        fetchPayouts();
+      }
+    } catch (e) {
+      debugPrint('Error updating payout: $e');
+      String msg = "Failed to update payout";
+      if (e is DioException) msg = e.response?.data['message'] ?? msg;
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> updateResellerStatus(String id, String status) async {
+    try {
+      final res = await ApiService().dio.patch('/admin/reseller/withdrawals/$id', data: {'status': status});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.data['message'] ?? "Status updated")));
+        fetchResellerPayouts();
+      }
+    } catch (e) {
+      debugPrint('Error updating reseller payout: $e');
+      String msg = "Failed to update payout";
+      if (e is DioException) msg = e.response?.data['message'] ?? msg;
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    }
+  }
+
+  void _showMarkPaidDialog(String id) {
+    final txController = TextEditingController();
+    final noteController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Mark as Paid', style: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: txController, decoration: const InputDecoration(labelText: 'Transaction ID / Ref No', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: noteController, decoration: const InputDecoration(labelText: 'Admin Note', border: OutlineInputBorder())),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              updateStatus(id, 'mark-paid', extraData: {
+                'transactionId': txController.text,
+                'adminNote': noteController.text
+              });
+            },
+            child: const Text('Confirm Payment'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _downloadCSV(Map<String, dynamic> vendorData, List ledger) {
+    String csv = "Date,Type,Reference ID,Amount,Commission\n";
+    for (var item in ledger) {
+      final date = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(item['date']));
+      final type = item['type'] == 'earning' ? 'Earning' : 'Payout';
+      final ref = item['referenceId'] ?? '-';
+      final amount = item['amount'] ?? 0;
+      final comm = item['commission'] ?? 0;
+      csv += "$date,$type,$ref,$amount,$comm\n";
+    }
+    
+    final fileName = "Ledger_${vendorData['businessName'] ?? vendorData['user']?['name'] ?? 'Vendor'}.csv";
+    downloadFile(csv, fileName);
+  }
+
+  void _downloadPDF(Map<String, dynamic> vendorData, List ledger) async {
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Vendor Ledger', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.Text('Vendor: ${vendorData['businessName'] ?? vendorData['user']?['name'] ?? 'Unknown'}'),
+              pw.SizedBox(height: 20),
+              pw.Table.fromTextArray(
+                headers: ['Date', 'Type', 'Reference ID', 'Amount'],
+                data: ledger.map((item) {
+                  return [
+                    DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(item['date'])),
+                    item['type'] == 'earning' ? 'Earning' : 'Payout',
+                    item['referenceId'] ?? '-',
+                    'Rs. ${item['amount']}',
+                  ];
+                }).toList(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
+  void _showLedgerDialog(Map<String, dynamic> vendorData) async {
+    final vendorUserId = vendorData['user']?['_id'];
+    if (vendorUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vendor user ID not found')));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Vendor Ledger', style: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold, fontSize: 20)),
+            Text(vendorData['businessName'] ?? vendorData['user']?['name'] ?? '', style: GoogleFonts.instrumentSans(fontSize: 14, color: AppColors.mutedForeground)),
+          ],
+        ),
+        content: SizedBox(
+          width: 800,
+          height: 600,
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: sl<VendorService>().getVendorLedger(vendorUserId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              final data = snapshot.data!;
+              final ledger = data['ledger'] as List;
+
+              return Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _downloadPDF(vendorData, ledger),
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                        label: const Text('Download PDF'),
+                      ),
+                      const SizedBox(width: 12),
+                      TextButton.icon(
+                        onPressed: () => _downloadCSV(vendorData, ledger),
+                        icon: const Icon(Icons.table_view, color: AppColors.signal),
+                        label: const Text('Download CSV (Excel)'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Summary Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.muted,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildLedgerSummaryItem('Total Earnings', '₹${data['vendor']['totalEarnings']}'),
+                        _buildLedgerSummaryItem('Current Wallet', '₹${data['vendor']['walletBalance']}'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Ledger Table
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ListView.separated(
+                        itemCount: ledger.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = ledger[index];
+                          final isEarning = item['type'] == 'earning';
+                          return ListTile(
+                            leading: Icon(
+                              isEarning ? Icons.add_circle_outline : Icons.remove_circle_outline,
+                              color: isEarning ? AppColors.signal : Colors.red,
+                            ),
+                            title: Text(
+                              isEarning ? 'Order #${item['referenceId']}' : 'Payout #${item['referenceId']}',
+                              style: GoogleFonts.instrumentSans(fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              'Date: ${DateFormat('MMM dd, yyyy HH:mm').format(DateTime.parse(item['date']))}',
+                              style: GoogleFonts.instrumentSans(fontSize: 12),
+                            ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${isEarning ? "+" : "-"} ₹${item['amount']}',
+                                  style: GoogleFonts.instrumentSans(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: isEarning ? AppColors.signal : Colors.red,
+                                  ),
+                                ),
+                                if (isEarning)
+                                  Text(
+                                    'Comm: ₹${item['commission']}',
+                                    style: GoogleFonts.instrumentSans(fontSize: 10, color: AppColors.mutedForeground),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVendorPayoutsTab() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (payouts.isEmpty) {
+      return Center(
+        child: Text('No vendor payouts found.', style: GoogleFonts.instrumentSans(color: AppColors.mutedForeground, fontSize: 16)),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildStatCard('Pending', payouts.where((p) => p['status'] == 'pending').length.toString(), AppColors.mutedForeground),
+              const SizedBox(width: 24),
+              _buildStatCard('Approved', payouts.where((p) => p['status'] == 'approved').length.toString(), AppColors.foreground),
+              const SizedBox(width: 24),
+              _buildStatCard('Paid', payouts.where((p) => p['status'] == 'paid').length.toString(), AppColors.signal),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: AppColors.muted),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(AppColors.muted),
+                    headingTextStyle: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.8,
+                      color: AppColors.mutedForeground,
+                    ),
+                    dataRowHeight: 80,
+                    horizontalMargin: 24,
+                    columns: const [
+                      DataColumn(label: Text('VENDOR INFO')),
+                      DataColumn(label: Text('AMOUNT')),
+                      DataColumn(label: Text('METHOD')),
+                      DataColumn(label: Text('DETAILS')),
+                      DataColumn(label: Text('STATUS')),
+                      DataColumn(label: Text('ACTIONS')),
+                    ],
+                    rows: payouts.map((p) {
+                      final vendorUser = p['vendor']?['user'];
+                      return DataRow(cells: [
+                        DataCell(Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppColors.primary.withOpacity(0.1),
+                              child: Text(vendorUser?['name']?[0] ?? 'V', style: TextStyle(color: AppColors.primary)),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(vendorUser?['name']?.toString() ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text(vendorUser?['email']?.toString() ?? '', style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground)),
+                              ],
+                            ),
+                          ],
+                        )),
+                        DataCell(Text('₹${p["amount"]?.toString() ?? "0"}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                        DataCell(Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: AppColors.muted, borderRadius: BorderRadius.circular(20)),
+                          child: Text(p["methodType"]?.toString().toUpperCase() ?? "UNKNOWN", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        )),
+                        DataCell(_buildDetailsCell(p["methodType"]?.toString() ?? "", p["details"] ?? {})),
+                        DataCell(_buildStatusBadge(p["status"]?.toString() ?? "pending")),
+                        DataCell(_buildActions(p)),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResellerPayoutsTab() {
+    if (isResellerLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (resellerPayouts.isEmpty) {
+      return Center(
+        child: Text('No reseller payouts found.', style: GoogleFonts.instrumentSans(color: AppColors.mutedForeground, fontSize: 16)),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildStatCard('Pending', resellerPayouts.where((p) => p['status'] == 'pending').length.toString(), AppColors.mutedForeground),
+              const SizedBox(width: 24),
+              _buildStatCard('Approved', resellerPayouts.where((p) => p['status'] == 'approved').length.toString(), AppColors.foreground),
+              const SizedBox(width: 24),
+              _buildStatCard('Rejected', resellerPayouts.where((p) => p['status'] == 'rejected').length.toString(), Colors.red),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: AppColors.muted),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(AppColors.muted),
+                    headingTextStyle: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.8,
+                      color: AppColors.mutedForeground,
+                    ),
+                    dataRowHeight: 90,
+                    horizontalMargin: 24,
+                    columns: const [
+                      DataColumn(label: Text('RESELLER INFO')),
+                      DataColumn(label: Text('AMOUNT')),
+                      DataColumn(label: Text('PAYMENT DETAILS')),
+                      DataColumn(label: Text('ORDERS & VENDORS')),
+                      DataColumn(label: Text('STATUS')),
+                      DataColumn(label: Text('ACTIONS')),
+                    ],
+                    rows: resellerPayouts.map((p) {
+                      final isPending = p["status"]?.toString().toLowerCase() == 'pending';
+                      final upi = p["upiId"];
+                      return DataRow(cells: [
+                        DataCell(Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(p["ResellerName"]?.toString() ?? 'Unknown Reseller', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(p["upiId"]?.toString() ?? p["accountNumber"]?.toString() ?? '', style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground)),
+                          ],
+                        )),
+                        DataCell(Text('₹${p["amount"]?.toString() ?? "0"}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                        DataCell(Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (upi != null && upi.toString().isNotEmpty)
+                              Text('UPI: $upi')
+                            else ...[
+                              Text('Acc: ${p["accountNumber"] ?? "N/A"}'),
+                              Text('IFSC: ${p["ifsc"] ?? "N/A"} (${p["bankName"] ?? ""})', style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground)),
+                            ]
+                          ],
+                        )),
+                        DataCell(Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Orders: ${p["ordersCount"] ?? 0}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              p["vendorsList"] != null && (p["vendorsList"] as List).isNotEmpty
+                                  ? 'Vendors: ${(p["vendorsList"] as List).join(", ")}'
+                                  : 'No Vendors',
+                              style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        )),
+                        DataCell(_buildStatusBadge(p["status"]?.toString() ?? "pending")),
+                        DataCell(isPending
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.check_circle_outline, color: AppColors.signal),
+                                    onPressed: () => updateResellerStatus(p["id"], 'approved'),
+                                    tooltip: 'Approve Payout',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                                    onPressed: () => updateResellerStatus(p["id"], 'rejected'),
+                                    tooltip: 'Reject Payout',
+                                  ),
+                                ],
+                              )
+                            : const Text('Processed', style: TextStyle(color: AppColors.mutedForeground, fontSize: 12))),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLedgerSummaryItem(String label, String value) {
+    return Column(
+      children: [
+        Text(label, style: GoogleFonts.instrumentSans(fontSize: 12, color: AppColors.mutedForeground)),
+        const SizedBox(height: 4),
+        Text(value, style: GoogleFonts.instrumentSans(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.foreground)),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          const Sidebar(currentRoute: '/payouts'),
+          Expanded(
+            child: DefaultTabController(
+              length: 2,
+              child: Column(
+                children: [
+                  const TopBar(),
+                  Container(
+                    color: AppColors.background,
+                    child: TabBar(
+                      labelColor: AppColors.foreground,
+                      unselectedLabelColor: AppColors.mutedForeground,
+                      indicatorColor: AppColors.foreground,
+                      labelStyle: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold, fontSize: 16),
+                      unselectedLabelStyle: GoogleFonts.instrumentSans(fontSize: 15),
+                      tabs: const [
+                        Tab(text: "Vendor Payouts"),
+                        Tab(text: "Reseller Payouts"),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildVendorPayoutsTab(),
+                        _buildResellerPayoutsTab(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsCell(String type, Map<String, dynamic> details) {
+    if (type == 'upi') {
+      return Text('UPI: ${details["upiId"] ?? "N/A"}\n${details["holderName"] ?? "N/A"}');
+    } else {
+      return Text('Acc: ${details["accountNumber"] ?? "N/A"}\n${details["bankName"] ?? "N/A"} (${details["ifsc"] ?? "N/A"})');
+    }
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color = AppColors.mutedForeground;
+    String statusStr = status.toString().toLowerCase();
+    if (statusStr == 'pending') color = AppColors.mutedForeground;
+    if (statusStr == 'approved') color = AppColors.foreground;
+    if (statusStr == 'paid') color = AppColors.signal;
+    if (statusStr == 'rejected') color = Colors.red;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+      child: Text(statusStr.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildActions(Map<String, dynamic> p) {
+    final status = p['status']?.toString();
+    if (status == 'pending') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined, color: AppColors.foreground), 
+            onPressed: () => _showLedgerDialog(p['vendor']),
+            tooltip: 'View Ledger',
+          ),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline, color: AppColors.signal), 
+            onPressed: () => updateStatus(p['_id'], 'approve'),
+            tooltip: 'Approve',
+          ),
+          IconButton(
+            icon: const Icon(Icons.cancel_outlined, color: Colors.red), 
+            onPressed: () => updateStatus(p['_id'], 'reject', extraData: {'adminNote': 'Rejected by admin'}),
+            tooltip: 'Reject',
+          ),
+        ],
+      );
+    } else if (status == 'approved') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined, color: AppColors.foreground), 
+            onPressed: () => _showLedgerDialog(p['vendor']),
+            tooltip: 'View Ledger',
+          ),
+          SizedBox(
+            height: 36,
+            child: ElevatedButton(
+              onPressed: () => _showMarkPaidDialog(p['_id']),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.signal, 
+                foregroundColor: AppColors.background,
+                elevation: 0,
+                shape: StadiumBorder(),
+              ),
+              child: const Text('Mark Paid', style: TextStyle(fontSize: 12)),
+            ),
+          ),
+        ],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.receipt_long_outlined, color: AppColors.foreground, size: 18), 
+          onPressed: () => _showLedgerDialog(p['vendor']),
+          tooltip: 'View Ledger',
+        ),
+        Text(p['processedDate']?.toString().substring(0, 10) ?? '-', style: const TextStyle(color: AppColors.mutedForeground, fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: GoogleFonts.instrumentSans(color: AppColors.mutedForeground, fontSize: 14)),
+            const SizedBox(height: 8),
+            Text(count, style: GoogleFonts.instrumentSans(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+}

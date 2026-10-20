@@ -1,0 +1,316 @@
+const Setting = require("../model/Setting.js");
+
+const defaultSettings = {
+  marketplaceName: "CURATO",
+  tagline: "Where Great Products Meet Happy Customers",
+  supportEmail: "support@asauvia.com",
+  supportPhone: "+1 (555) 123-4567",
+  footerMessage: "© 2026 CURATO. All rights reserved.",
+  logo: "",
+  favicon: "",
+  enableAnnouncement: false,
+  announcementMessage: "",
+  announcementLink: "",
+  contactPhone: "+91 908/694321",
+  contactEmail: "support@asauvia.com",
+  contactAddress: "Ghaziabad, Uttar Pradesh",
+  returnRefundPolicy: "",
+  termsConditions: "",
+  vendorTermsConditions: "",
+  privacyPolicy: "",
+  aboutUsContent: "",
+  facebookLink: "",
+  instagramLink: "",
+  twitterLink: "",
+  youtubeLink: "",
+  linkedinLink: "",
+  defaultCommission: 10,
+  navigationMenuItems: 'HOME, FEATURES, DEALS, SHOP, BLOG',
+  homeSectionsActive: 'HERO, DAILY_DEALS, SUMMER_SALE, TRENDING, PROMO_GRID, BECOME_VENDOR, JUST_FOR_YOU, LATEST_PRODUCTS, ADS_SUBSCRIBE',
+  showTrendingProducts: true,
+  showTrendingB2BBanner: true,
+  trendingCategories: 'All, Pet Supplies, Jewelry & Accessories, Industrial Parts & Tools, Books & Stationery, Toys & Games',
+  serviceCard1Title: 'FREE DELIVERY',
+  serviceCard1Subtitle: 'From ₹89.00',
+  serviceCard1Icon: 'https://cdn-icons-png.flaticon.com/512/709/709790.png',
+  serviceCard2Title: 'ORDER PROTECTION',
+  serviceCard2Subtitle: 'Refund/Resent 120 Day',
+  serviceCard2Icon: 'https://cdn-icons-png.flaticon.com/512/1161/1161388.png',
+  serviceCard3Title: 'PAYMENT SECURITY',
+  serviceCard3Subtitle: 'SSL Secure Payment',
+  serviceCard3Icon: 'https://cdn-icons-png.flaticon.com/512/1069/1069159.png',
+  serviceCard4Title: '24/7 SUPPORT',
+  serviceCard4Subtitle: 'Dedicated Support',
+  serviceCard4Icon: 'https://cdn-icons-png.flaticon.com/512/2838/2838634.png',
+  whatsappToken: '31DB85C1-3DDE-47C4-AC1C-A59B4ED89624',
+  whatsappNumber: '919325570093',
+  whatsappChatLink: 'https://wa.me/919325570093',
+  whatsappOrderUpdates: true,
+  whatsappApiUrl: 'https://mankiwave.in/api/send',
+  whatsappInstanceId: '',
+};
+
+// Helper to get or create the singleton setting document
+const getOrCreateSetting = async () => {
+  let setting = await Setting.findOne();
+  if (!setting) {
+    setting = await Setting.create(defaultSettings);
+  } else {
+    let updated = false;
+    if (setting.vendorTermsConditions === undefined) {
+      setting.vendorTermsConditions = "";
+      updated = true;
+    }
+    if (updated) {
+      await setting.save();
+    }
+  }
+  return setting;
+};
+
+const getSettings = async (req, res) => {
+  try {
+    const setting = await getOrCreateSetting();
+    res.status(200).json({ data: setting });
+  } catch (error) {
+    console.error("Get settings error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Public route — no auth needed so user app can call it freely
+const getPublicSettings = async (req, res) => {
+  try {
+    const setting = await getOrCreateSetting();
+    const publicData = setting.toObject();
+    
+    // Exclude sensitive keys from public settings
+    delete publicData.paymentGatewayKey;
+    delete publicData.paymentGatewaySalt;
+    delete publicData.delhiveryToken;
+    delete publicData.emailUser;
+    delete publicData.emailPass;
+    delete publicData.whatsappToken;
+    delete publicData.whatsappApiUrl;
+    delete publicData.whatsappInstanceId;
+    
+    res.status(200).json({ data: publicData });
+  } catch (error) {
+    console.error("Get public settings error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateSettings = async (req, res) => {
+  try {
+    console.log("Update settings request received:", req.body);
+    const {
+      marketplaceName,
+      tagline,
+      supportEmail,
+      supportPhone,
+      footerMessage,
+      logo,
+      favicon,
+      enableAnnouncement,
+      announcementMessage,
+      announcementLink,
+      defaultCommission,
+      contactPhone,
+      contactEmail,
+      contactAddress,
+      returnRefundPolicy,
+      termsConditions,
+      vendorTermsConditions,
+      privacyPolicy,
+      aboutUsContent,
+      facebookLink,
+      instagramLink,
+      twitterLink,
+      youtubeLink,
+      linkedinLink,
+      paymentGatewayKey,
+      paymentGatewaySalt,
+      delhiveryToken,
+      emailUser,
+      emailPass,
+      whatsappToken,
+      whatsappNumber,
+      whatsappChatLink,
+      whatsappOrderUpdates,
+      whatsappApiUrl,
+      whatsappInstanceId,
+      geminiApiKey,
+      openAiApiKey,
+      navigationMenuItems,
+      homeSectionsActive,
+      showTrendingProducts,
+      showTrendingB2BBanner,
+      trendingCategories,
+      serviceCard1Title,
+      serviceCard1Subtitle,
+      serviceCard1Icon,
+      serviceCard2Title,
+      serviceCard2Subtitle,
+      serviceCard2Icon,
+      serviceCard3Title,
+      serviceCard3Subtitle,
+      serviceCard3Icon,
+      serviceCard4Title,
+      serviceCard4Subtitle,
+      serviceCard4Icon
+    } = req.body;
+
+    let setting = await getOrCreateSetting();
+
+    if (marketplaceName !== undefined) setting.marketplaceName = marketplaceName;
+    if (tagline !== undefined) setting.tagline = tagline;
+    if (supportEmail !== undefined) setting.supportEmail = supportEmail;
+    if (supportPhone !== undefined) setting.supportPhone = supportPhone;
+    if (footerMessage !== undefined) setting.footerMessage = footerMessage;
+    if (logo !== undefined) setting.logo = logo;
+    if (favicon !== undefined) setting.favicon = favicon;
+    if (enableAnnouncement !== undefined) setting.enableAnnouncement = enableAnnouncement;
+    if (announcementMessage !== undefined) setting.announcementMessage = announcementMessage;
+    if (announcementLink !== undefined) setting.announcementLink = announcementLink;
+    if (defaultCommission !== undefined) setting.defaultCommission = defaultCommission;
+    if (contactPhone !== undefined) setting.contactPhone = contactPhone;
+    if (contactEmail !== undefined) setting.contactEmail = contactEmail;
+    if (contactAddress !== undefined) setting.contactAddress = contactAddress;
+    if (returnRefundPolicy !== undefined) setting.returnRefundPolicy = returnRefundPolicy;
+    if (termsConditions !== undefined) setting.termsConditions = termsConditions;
+    if (vendorTermsConditions !== undefined) setting.vendorTermsConditions = vendorTermsConditions;
+    if (privacyPolicy !== undefined) setting.privacyPolicy = privacyPolicy;
+    if (aboutUsContent !== undefined) setting.aboutUsContent = aboutUsContent;
+    if (facebookLink !== undefined) setting.facebookLink = facebookLink;
+    if (instagramLink !== undefined) setting.instagramLink = instagramLink;
+    if (twitterLink !== undefined) setting.twitterLink = twitterLink;
+    if (youtubeLink !== undefined) setting.youtubeLink = youtubeLink;
+    if (linkedinLink !== undefined) setting.linkedinLink = linkedinLink;
+    if (geminiApiKey !== undefined) setting.geminiApiKey = geminiApiKey;
+    if (openAiApiKey !== undefined) setting.openAiApiKey = openAiApiKey;
+    if (navigationMenuItems !== undefined) setting.navigationMenuItems = navigationMenuItems;
+    if (homeSectionsActive !== undefined) setting.homeSectionsActive = homeSectionsActive;
+    if (showTrendingProducts !== undefined) setting.showTrendingProducts = showTrendingProducts;
+    if (showTrendingB2BBanner !== undefined) setting.showTrendingB2BBanner = showTrendingB2BBanner;
+    if (trendingCategories !== undefined) setting.trendingCategories = trendingCategories;
+    if (whatsappNumber !== undefined) setting.whatsappNumber = whatsappNumber;
+    if (whatsappChatLink !== undefined) setting.whatsappChatLink = whatsappChatLink;
+    if (whatsappOrderUpdates !== undefined) setting.whatsappOrderUpdates = whatsappOrderUpdates;
+    
+    if (serviceCard1Title !== undefined) setting.serviceCard1Title = serviceCard1Title;
+    if (serviceCard1Subtitle !== undefined) setting.serviceCard1Subtitle = serviceCard1Subtitle;
+    if (serviceCard1Icon !== undefined) setting.serviceCard1Icon = serviceCard1Icon;
+    
+    if (serviceCard2Title !== undefined) setting.serviceCard2Title = serviceCard2Title;
+    if (serviceCard2Subtitle !== undefined) setting.serviceCard2Subtitle = serviceCard2Subtitle;
+    if (serviceCard2Icon !== undefined) setting.serviceCard2Icon = serviceCard2Icon;
+    
+    if (serviceCard3Title !== undefined) setting.serviceCard3Title = serviceCard3Title;
+    if (serviceCard3Subtitle !== undefined) setting.serviceCard3Subtitle = serviceCard3Subtitle;
+    if (serviceCard3Icon !== undefined) setting.serviceCard3Icon = serviceCard3Icon;
+    
+    if (serviceCard4Title !== undefined) setting.serviceCard4Title = serviceCard4Title;
+    if (serviceCard4Subtitle !== undefined) setting.serviceCard4Subtitle = serviceCard4Subtitle;
+    if (serviceCard4Icon !== undefined) setting.serviceCard4Icon = serviceCard4Icon;
+    
+    // Sensitive fields
+    if (paymentGatewayKey !== undefined) setting.paymentGatewayKey = paymentGatewayKey;
+    if (paymentGatewaySalt !== undefined) setting.paymentGatewaySalt = paymentGatewaySalt;
+    if (delhiveryToken !== undefined) setting.delhiveryToken = delhiveryToken;
+    if (emailUser !== undefined) setting.emailUser = emailUser;
+    if (emailPass !== undefined) setting.emailPass = emailPass;
+    if (whatsappToken !== undefined) setting.whatsappToken = whatsappToken;
+    if (whatsappApiUrl !== undefined) setting.whatsappApiUrl = whatsappApiUrl;
+    if (whatsappInstanceId !== undefined) setting.whatsappInstanceId = whatsappInstanceId;
+
+    await setting.save();
+
+    // Emit real-time update to all connected clients
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("admin_data_updated", {
+        type: "settings",
+        action: "update",
+        data: setting,
+      });
+      console.log("Socket event emitted: settings update");
+    }
+
+    res.status(200).json({ data: setting, message: "Settings saved successfully" });
+  } catch (error) {
+    console.error("Update settings error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const resetSettings = async (req, res) => {
+  try {
+    let setting = await getOrCreateSetting();
+    Object.assign(setting, defaultSettings);
+    await setting.save();
+
+    // Emit real-time update to all connected clients
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("admin_data_updated", {
+        type: "settings",
+        action: "reset",
+        data: setting,
+      });
+    }
+
+    res.status(200).json({ data: setting, message: "Settings reset to defaults" });
+  } catch (error) {
+    console.error("Reset settings error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const testWhatsApp = async (req, res) => {
+  try {
+    const { mobile, message, whatsappToken, whatsappApiUrl, whatsappInstanceId } = req.body;
+    if (!mobile) {
+      return res.status(400).json({ success: false, message: "Recipient mobile number is required" });
+    }
+
+    const WhatsAppService = require("../service/WhatsAppService");
+    const result = await WhatsAppService.sendTestMessage(mobile, message, {
+      whatsappToken,
+      whatsappApiUrl,
+      whatsappInstanceId
+    });
+
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: result.mocked ? "Simulated test message logged (WhatsApp Token not set)" : "WhatsApp test message sent successfully!",
+        data: result.data
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: result.error || "Failed to send WhatsApp message",
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error("Test WhatsApp error:", error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getSettingsFaviconRedirect = async (req, res) => {
+  try {
+    const setting = await getOrCreateSetting();
+    if (setting && setting.favicon) {
+      return res.redirect(setting.favicon);
+    }
+    return res.redirect("/favicon.png");
+  } catch (error) {
+    console.error("Favicon redirect error:", error.message);
+    return res.redirect("/favicon.png");
+  }
+};
+
+module.exports = { getSettings, getPublicSettings, updateSettings, resetSettings, testWhatsApp, getSettingsFaviconRedirect };

@@ -1,0 +1,524 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_user/core/constants/app_colors.dart';
+import 'package:curato_user/core/widgets/centered_content.dart';
+import 'package:curato_user/core/controllers/home_controller.dart';
+import 'package:curato_user/core/controllers/settings_controller.dart';
+import 'package:curato_user/features/home/domain/models/product_model.dart';
+import 'package:curato_user/features/home/presentation/widgets/product_card.dart';
+import 'package:curato_user/features/home/presentation/widgets/category_filter.dart';
+import 'package:curato_user/core/utils/responsive.dart';
+import 'package:curato_user/features/cart/application/cart_controller.dart';
+import '../../../../core/services/session_service.dart';
+
+class TrendingItemsSection extends StatefulWidget {
+  const TrendingItemsSection({super.key});
+
+  @override
+  State<TrendingItemsSection> createState() => _TrendingItemsSectionState();
+}
+
+class _TrendingItemsSectionState extends State<TrendingItemsSection> {
+  String _selectedCategory = 'All';
+
+  @override
+  Widget build(BuildContext context) {
+    final settingsController = SettingsController.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([HomeController.instance, settingsController]),
+      builder: (context, _) {
+        final settings = settingsController.settings;
+        List<String> categories = settings.trendingCategories
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        
+        // Fallback to active categories if not configured in settings
+        if (categories.isEmpty) {
+          categories = HomeController.instance.categories
+              .map((c) => (c is Map ? (c['name'] ?? '') : '').toString().trim())
+              .where((e) => e.isNotEmpty)
+              .take(6)
+              .toList()
+              .cast<String>();
+        }
+        
+        if (!categories.contains('All')) {
+          categories.insert(0, 'All');
+        }
+
+        if (!categories.contains(_selectedCategory)) {
+          _selectedCategory = 'All';
+        }
+
+        var products = HomeController.instance.trendingProducts;
+
+        // Apply filtering
+        if (_selectedCategory != 'All') {
+          final target = _selectedCategory.toLowerCase().replaceAll('&', 'and').replaceAll(RegExp(r'\s+'), ' ').trim();
+          products = products.where((p) {
+            final category = p['category'];
+            String? catName;
+            if (category is Map) {
+              catName = category['name']?.toString();
+            } else if (p['categoryName'] != null) {
+              catName = p['categoryName'].toString();
+            } else if (category is String) {
+              catName = category;
+            }
+            
+            if (catName == null || catName.isEmpty) return false;
+            final normalized = catName.toLowerCase().replaceAll('&', 'and').replaceAll(RegExp(r'\s+'), ' ').trim();
+            
+            if (normalized == target || normalized.contains(target) || target.contains(normalized)) {
+              return true;
+            }
+            final targetWords = target.split(' ').where((w) => w.length > 2).toList();
+            for (final word in targetWords) {
+              if (normalized.contains(word)) return true;
+            }
+            return false;
+          }).toList();
+        }
+
+        final bool isMobile = Responsive.isMobile(context);
+        final bool isTablet = Responsive.isTablet(context);
+
+        return CenteredContent(
+          horizontalPadding: isMobile ? 16 : 40,
+          child: Column(
+            children: [
+              SizedBox(height: isMobile ? 16 : 60),
+              // 1. Header
+              if (isMobile)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentPink,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'TRENDING ITEMS',
+                        style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: CategoryFilter(
+                        categories: categories,
+                        selectedCategory: _selectedCategory,
+                        onCategoryChanged: (cat) {
+                          setState(() {
+                            _selectedCategory = cat;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentPink,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'TRENDING ITEMS',
+                        style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                      ),
+                    ),
+                    const Spacer(),
+                    CategoryFilter(
+                      categories: categories,
+                      selectedCategory: _selectedCategory,
+                      onCategoryChanged: (cat) {
+                        setState(() {
+                          _selectedCategory = cat;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              SizedBox(height: isMobile ? 12 : 40),
+              
+              if (settings.showTrendingB2BBanner) ...[
+                Builder(
+                  builder: (context) {
+                    final allBanners = HomeController.instance.banners;
+                    final b2bBanners = allBanners
+                        .where((b) => b.type == 'b2b_partner')
+                        .toList();
+                    final banner = b2bBanners.isNotEmpty ? b2bBanners[0] : null;
+
+                    if (banner != null && banner.imageUrl.isNotEmpty) {
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () {
+                            final targetLink = banner.link.isEmpty ? '/shop' : banner.link;
+                            Navigator.pushNamed(context, targetLink);
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            constraints: BoxConstraints(
+                              maxHeight: isMobile ? 150 : (isTablet ? 280 : 360),
+                            ),
+                            decoration:  BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+
+                               color: Colors.transparent,
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Image.network(
+                              banner.imageUrl,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final String tagText = (banner != null && banner.tag.isNotEmpty)
+                        ? banner.tag.toUpperCase()
+                        : 'WHY CHOOSE CURATO INDIA?';
+                    final String titleText = (banner != null && banner.title.isNotEmpty)
+                        ? banner.title
+                        : 'Your Trusted B2B\nGifting Partner';
+                    final String buttonText = 'Know More About Us';
+                    final String link = (banner != null && banner.link.isNotEmpty) ? banner.link : '/about-us';
+
+                    return Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16 : 40,
+                        vertical: isMobile ? 32 : 48,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryIndigo,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: isMobile
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tagText,
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.background,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  titleText,
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppColors.white,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: 60,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pushNamed(context, link),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.transparent,
+                                    foregroundColor: AppColors.background,
+                                    side: const BorderSide(color: AppColors.background, width: 1.5),
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                    shape: const StadiumBorder(),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    buttonText,
+                                    style: GoogleFonts.instrumentSans(fontSize: 13, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(height: 40),
+                                const Divider(color: AppColors.white24, height: 1),
+                                const SizedBox(height: 24),
+                                _buildFeatureItem(Icons.verified_outlined, '40+ Years of Experience'),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(Icons.diamond_outlined, 'Wide Range Premium Quality Products'),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(Icons.inventory_2_outlined, 'Bulk Order Support & Best Pricing'),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(Icons.edit_note_outlined, 'Custom Branding & Private Label Solutions'),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(Icons.card_giftcard_outlined, 'Premium Packaging'),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(Icons.local_shipping_outlined, 'PAN India Delivery'),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Left Content Block
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        tagText,
+                                        style: GoogleFonts.instrumentSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.background,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        titleText,
+                                        style: GoogleFonts.instrumentSans(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w400,
+                                          color: AppColors.white,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: 60,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.background,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pushNamed(context, link),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.transparent,
+                                          foregroundColor: AppColors.background,
+                                          side: const BorderSide(color: AppColors.background, width: 1.5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                          shape: const StadiumBorder(),
+                                          elevation: 0,
+                                        ),
+                                        child: Text(
+                                          buttonText,
+                                          style: GoogleFonts.instrumentSans(fontSize: 13, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 32),
+                                // Right Features Grid List
+                                Expanded(
+                                  flex: 7,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      _buildGridFeatureItem(Icons.verified_outlined, '40+', 'Years of\nExperience'),
+                                      _buildVerticalDivider(),
+                                      _buildGridFeatureItem(Icons.diamond_outlined, 'Wide Range', 'Premium Quality\nProducts'),
+                                      _buildVerticalDivider(),
+                                      _buildGridFeatureItem(Icons.inventory_2_outlined, 'Bulk Order', 'Support & Best\nPricing'),
+                                      _buildVerticalDivider(),
+                                      _buildGridFeatureItem(Icons.edit_note_outlined, 'Custom Branding &', 'Private Label\nSolutions'),
+                                      _buildVerticalDivider(),
+                                      _buildGridFeatureItem(Icons.card_giftcard_outlined, 'Premium', 'Packaging'),
+                                      _buildVerticalDivider(),
+                                      _buildGridFeatureItem(Icons.local_shipping_outlined, 'PAN India', 'Delivery'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                    );
+                  },
+                ),
+              ],
+              
+              SizedBox(height: isMobile ? 16 : 48),
+              
+              // 3. Trending Product Grid
+              if (settings.showTrendingProducts) ...[
+                if (products.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 60),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.grey200),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.trending_up_outlined, size: 48, color: AppColors.grey300),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No trending products at the moment.',
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 15,
+                            color: AppColors.grey500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: products.length > 5 ? 5 : products.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: isMobile ? 2 : (isTablet ? 3 : 5),
+                      mainAxisSpacing: isMobile ? 12 : 24,
+                      crossAxisSpacing: isMobile ? 12 : 24,
+                      mainAxisExtent: isMobile ? 380 : 420,
+                    ),
+                    itemBuilder: (context, index) {
+                      final product = ProductModel.fromMap(products[index]);
+                      return ProductCard(
+                        product: product,
+                        onAddToCart: () async {
+                          final String? token = SessionService.instance.token;
+                          if (token == null) {
+                            CartController.instance.setPendingItem(product.id, null);
+                            Navigator.pushNamed(context, '/login');
+                            return;
+                          }
+                          
+                          final success = await CartController.instance.addToCart(product.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(success ? '${product.name} added to cart!' : 'Failed to add. Please login.'),
+                              backgroundColor: success ? AppColors.signal : AppColors.errorRed,
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ));
+                          }
+                        },
+                      );
+                    },
+                  ),
+                if (products.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 28),
+                    child: Center(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/shop',
+                            arguments: <String, dynamic>{
+                              'category': _selectedCategory == 'All' ? 'All' : _selectedCategory,
+                              'subcategory': 'All',
+                            },
+                          );
+                        },
+                        icon: const Icon(Icons.arrow_forward, size: 16, color: AppColors.primaryPink),
+                        label: Text(
+                          _selectedCategory == 'All'
+                              ? 'View All Trending in Shop'
+                              : 'Explore All in "$_selectedCategory"',
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryPink,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primaryPink, width: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: const StadiumBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+              // SizedBox(height: isMobile ? 32 : 60),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.background, size: 24),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.instrumentSans(
+              color: AppColors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGridFeatureItem(IconData icon, String boldText, String subText) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.background, size: 36),
+          const SizedBox(height: 12),
+          Text(
+            boldText,
+            style: GoogleFonts.instrumentSans(
+              color: AppColors.background,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subText,
+            style: GoogleFonts.instrumentSans(
+              color: AppColors.white,
+              fontSize: 12,
+              height: 1.3,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      height: 60,
+      width: 1,
+      color: AppColors.white24,
+    );
+  }
+}
+

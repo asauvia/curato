@@ -1,0 +1,501 @@
+import 'dart:convert';
+import 'package:curato_user/core/controllers/home_controller.dart';
+import 'package:curato_user/core/services/api_service.dart';
+
+class ProductAttributes {
+  final bool modelName;
+  final bool color;
+  final bool material;
+
+  ProductAttributes({
+    this.modelName = false,
+    this.color = false,
+    this.material = false,
+  });
+
+  factory ProductAttributes.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return ProductAttributes();
+    return ProductAttributes(
+      modelName: (map['modelName'] ?? map['size']) ?? false,
+      color: map['color'] ?? false,
+      material: map['material'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'modelName': modelName,
+      'size': modelName,
+      'color': color,
+      'material': material,
+    };
+  }
+}
+
+class ProductVariation {
+  final String id;
+  final String? title;
+  final String? modelName;
+  final String? size;
+  final String? color;
+  final String? material;
+  final double price;
+  final double? oldPrice;
+  final int stock;
+  final int? moq;
+  final double? weight;
+  final String? weightStr;
+  final String? sku;
+  final String? image;
+  final List<String> images;
+
+  ProductVariation({
+    required this.id,
+    this.title,
+    this.modelName,
+    this.size,
+    this.color,
+    this.material,
+    required this.price,
+    this.oldPrice,
+    required this.stock,
+    this.moq,
+    this.weight,
+    this.weightStr,
+    this.sku,
+    this.image,
+    this.images = const [],
+  });
+
+  factory ProductVariation.fromMap(Map<String, dynamic> map) {
+    List<String> parsedImages = [];
+    if (map['images'] != null && map['images'] is List) {
+      parsedImages = (map['images'] as List)
+          .map((e) => ApiService.formatImageUrl(e.toString()))
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    final String? rawSize = map['size']?.toString().trim();
+    final String? rawModelName = map['modelName']?.toString().trim();
+    return ProductVariation(
+      id: map['_id'] ?? '',
+      title: map['title'],
+      modelName: (rawModelName != null && rawModelName.isNotEmpty) ? rawModelName : ((rawSize != null && rawSize.isNotEmpty) ? rawSize : null),
+      size: (rawSize != null && rawSize.isNotEmpty) ? rawSize : null,
+      color: map['color'],
+      material: map['material'],
+      price: _toDouble(map['price']).ceilToDouble(),
+      oldPrice: map['oldPrice'] != null ? _toDouble(map['oldPrice']).ceilToDouble() : null,
+      stock: _toInt(map['stock']),
+      moq: map['moq'] != null ? _toInt(map['moq']) : null,
+      weight: _toDouble(map['weight']),
+      weightStr: map['weight']?.toString(),
+      sku: map['sku'],
+      image: map['image'] != null && map['image'].toString().isNotEmpty
+          ? ApiService.formatImageUrl(map['image'].toString())
+          : (parsedImages.isNotEmpty ? parsedImages[0] : null),
+      images: parsedImages,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      '_id': id,
+      'title': title,
+      'modelName': modelName,
+      'size': size ?? modelName,
+      'color': color,
+      'material': material,
+      'price': price,
+      'oldPrice': oldPrice,
+      'stock': stock,
+      'moq': moq,
+      'weight': weightStr ?? weight,
+      'sku': sku,
+      'image': image,
+    };
+  }
+}
+
+class ProductVendor {
+  final String id;
+  final String name;
+  final String email;
+  final String? mobile;
+
+  ProductVendor({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.mobile,
+  });
+
+  factory ProductVendor.fromMap(Map<String, dynamic>? map) {
+    if (map == null) {
+      return ProductVendor(id: '', name: '', email: '');
+    }
+    return ProductVendor(
+      id: map['_id'] ?? map['id'] ?? '',
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      mobile: map['mobile'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      '_id': id,
+      'name': name,
+      'email': email,
+      'mobile': mobile,
+    };
+  }
+}
+
+class ProductDimensions {
+  final double length;
+  final double width;
+  final double height;
+
+  ProductDimensions({
+    this.length = 0,
+    this.width = 0,
+    this.height = 0,
+  });
+
+  factory ProductDimensions.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return ProductDimensions();
+    return ProductDimensions(
+      length: _toDouble(map['length']),
+      width: _toDouble(map['width']),
+      height: _toDouble(map['height']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'length': length,
+      'width': width,
+      'height': height,
+    };
+  }
+}
+
+class ProductSpecification {
+  final String id;
+  final String key;
+  final String value;
+
+  ProductSpecification({
+    required this.id,
+    required this.key,
+    required this.value,
+  });
+
+  factory ProductSpecification.fromMap(Map<String, dynamic> map) {
+    return ProductSpecification(
+      id: map['_id'] ?? '',
+      key: map['key'] ?? '',
+      value: map['value'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      '_id': id,
+      'key': key,
+      'value': value,
+    };
+  }
+}
+
+class ProductModel {
+  final String id;
+  final String name;
+  final String title;
+  final double price;
+  final double? oldPrice;
+  final String imageUrl;
+  final List<String> images;
+  final int discount;
+  final bool isFlashDeal;
+  final int? available;
+  final int? sold;
+
+  final double? gst;
+  final String? hsnCode;
+  final int moq;
+
+  // Rich metadata fields
+  final String? shortDescription;
+  final String? fullDescription;
+  final String? brand;
+  final String? category;
+  final String? subCategory;
+  final double? weight;
+  final double? length;
+  final double? width;
+  final double? height;
+  final String? youtubeLink;
+  final List<ProductSpecification>? specifications;
+  final List<String>? tags;
+  
+  // New aligned schema fields
+  final ProductAttributes attributes;
+  final List<ProductVariation> variations;
+  final ProductDimensions dimensions;
+  final ProductVendor? vendor;
+  
+  final int lowStockThreshold;
+  final bool trackQuantity;
+  final bool requiresShipping;
+  final String? seoTitle;
+  final String? seoDescription;
+  final String? slug;
+  final String status;
+  final String visibility;
+  final double moqDiscount;
+  final String moqTiers;
+  final List<String> showOnPages;
+  
+  // Pricing calculation fields
+  final double? originalPrice;
+  final double? commissionPercent;
+  final double? commissionAmount;
+  final double? sellingPrice;
+
+  final List<String> relatedProducts;
+
+  // Reseller deep-link and tracking details
+  final String? resellerCode;
+  final String? resellerId;
+  final double? resellerMarkup;
+
+  ProductModel({
+    required this.id,
+    required this.name,
+    required this.title,
+    required this.price,
+    this.oldPrice,
+    required this.imageUrl,
+    this.images = const [],
+    this.discount = 0,
+    this.isFlashDeal = false,
+    this.available,
+    this.sold,
+    this.relatedProducts = const [],
+    this.gst,
+    this.hsnCode,
+    this.moq = 1,
+    this.shortDescription,
+    this.fullDescription,
+    this.brand,
+    this.category,
+    this.subCategory,
+    this.weight,
+    this.length,
+    this.width,
+    this.height,
+    this.youtubeLink,
+    this.specifications,
+    this.tags,
+    required this.attributes,
+    required this.variations,
+    required this.dimensions,
+    this.vendor,
+    this.lowStockThreshold = 5,
+    this.trackQuantity = true,
+    this.requiresShipping = true,
+    this.seoTitle,
+    this.seoDescription,
+    this.slug,
+    this.status = 'Draft',
+    this.visibility = 'Public',
+    this.moqDiscount = 0,
+    this.moqTiers = '',
+    this.showOnPages = const ['Shop'],
+    this.originalPrice,
+    this.commissionPercent,
+    this.commissionAmount,
+    this.sellingPrice,
+    this.resellerCode,
+    this.resellerId,
+    this.resellerMarkup,
+  });
+
+  factory ProductModel.fromMap(Map<String, dynamic> p) {
+    double discountPrice = _toDouble(p['discountPrice'] ?? 0);
+    double regularPrice = _toDouble(p['price'] ?? 0);
+
+    double price = (discountPrice > 0 ? discountPrice : regularPrice).ceilToDouble();
+    double? oldPrice = discountPrice > 0 ? regularPrice.ceilToDouble() : null;
+    int disc = (oldPrice != null && oldPrice > price)
+        ? (((oldPrice - price) / oldPrice) * 100).toInt()
+        : 0;
+
+    String? imageUrl;
+    List<String> images = [];
+    
+    if (p['image'] != null && p['image'].toString().isNotEmpty) {
+      imageUrl = ApiService.formatImageUrl(p['image'].toString());
+      images.add(imageUrl);
+    }
+
+    if (p['gallery'] != null && p['gallery'] is List && (p['gallery'] as List).isNotEmpty) {
+      final galleryImages = (p['gallery'] as List)
+          .map((e) => ApiService.formatImageUrl(e.toString()))
+          .where((e) => e.isNotEmpty && !images.contains(e))
+          .toList();
+      images.addAll(galleryImages);
+    } else if (p['images'] != null && p['images'] is List && (p['images'] as List).isNotEmpty) {
+      final additionalImages = (p['images'] as List)
+          .map((e) => ApiService.formatImageUrl(e.toString()))
+          .where((e) => e.isNotEmpty && !images.contains(e))
+          .toList();
+      images.addAll(additionalImages);
+    }
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      if (images.isNotEmpty) {
+        imageUrl = images[0];
+      }
+    }
+
+    List<ProductSpecification>? specs;
+    if (p['specs'] != null) {
+      try {
+        specs = (p['specs'] as List).map((e) => ProductSpecification.fromMap(Map<String, dynamic>.from(e))).toList();
+      } catch (e) {
+        try {
+          final decoded = jsonDecode(p['specs']);
+          specs = (decoded as List).map((e) => ProductSpecification.fromMap(Map<String, dynamic>.from(e))).toList();
+        } catch (_) {}
+      }
+    }
+
+    List<ProductVariation> variations = [];
+    if (p['variations'] != null && p['variations'] is List) {
+      try {
+        variations = (p['variations'] as List).map((e) => ProductVariation.fromMap(Map<String, dynamic>.from(e))).toList();
+      } catch (_) {}
+    }
+
+    if (variations.isNotEmpty) {
+      final firstVar = variations.first;
+      price = firstVar.price;
+      oldPrice = firstVar.oldPrice;
+      disc = (oldPrice != null && oldPrice > price)
+          ? (((oldPrice - price) / oldPrice) * 100).toInt()
+          : 0;
+    }
+
+    ProductAttributes attributes = ProductAttributes.fromMap(
+      p['attributes'] is Map ? Map<String, dynamic>.from(p['attributes']) : null
+    );
+
+    ProductDimensions dimensions = ProductDimensions.fromMap(
+      p['dimensions'] is Map 
+          ? Map<String, dynamic>.from(p['dimensions']) 
+          : Map<String, dynamic>.from(p)
+    );
+
+    ProductVendor? vendor;
+    if (p['user'] != null && p['user'] is Map) {
+      try {
+        vendor = ProductVendor.fromMap(Map<String, dynamic>.from(p['user']));
+      } catch (_) {}
+    }
+
+    return ProductModel(
+      id: (p['_id'] ?? p['id'] ?? '').toString(),
+      name: p['name'] ?? 'Product',
+      title: p['title'] ?? p['name'] ?? 'Product',
+      price: price,
+      oldPrice: (oldPrice != null && oldPrice > price) ? oldPrice : null,
+      imageUrl: imageUrl ?? '',
+      images: images,
+      discount: disc,
+      isFlashDeal: disc > 20,
+      available: p['stock'] ?? 0,
+      sold: 5, // Mocked sold count
+      relatedProducts: (p['relatedProducts'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      gst: _toDouble(p['gst']),
+      hsnCode: p['hsnCode'],
+      moq: _toInt(p['moq'] ?? 1),
+      shortDescription: p['shortDescription'],
+      fullDescription: p['description'], // Notice key is 'description' in backend Product schema
+      brand: p['brand'],
+      category: p['category'],
+      subCategory: p['subCategory'],
+      weight: _toDouble(p['weight']),
+      length: dimensions.length,
+      width: dimensions.width,
+      height: dimensions.height,
+      youtubeLink: p['youtubeLink'],
+      specifications: specs,
+      tags: (p['tags'] as List?)?.map((e) => e.toString()).toList(),
+      attributes: attributes,
+      variations: variations,
+      dimensions: dimensions,
+      vendor: vendor,
+      lowStockThreshold: _toInt(p['lowStockThreshold'] ?? 5),
+      trackQuantity: p['trackQuantity'] ?? true,
+      requiresShipping: p['requiresShipping'] ?? true,
+      seoTitle: p['seoTitle'],
+      seoDescription: p['seoDescription'],
+      slug: p['slug'],
+      status: p['status'] ?? 'Draft',
+      visibility: p['visibility'] ?? 'Public',
+      moqDiscount: _toDouble(p['moqDiscount']),
+      moqTiers: p['moqTiers']?.toString() ?? '',
+      showOnPages: (p['showOnPages'] as List?)?.map((e) => e.toString()).toList() ?? ['Shop'],
+       originalPrice: _toDouble(p['originalPrice']),
+       commissionPercent: _toDouble(p['commissionPercent']),
+       commissionAmount: _toDouble(p['commissionAmount']),
+       sellingPrice: _toDouble(p['sellingPrice']),
+       resellerCode: p['resellerCode']?.toString(),
+       resellerId: p['resellerId']?.toString(),
+       resellerMarkup: _toDouble(p['resellerMarkup']),
+     );
+   }
+
+  static List<ProductModel> get dummyProducts {
+    return HomeController.instance.products.map((p) => ProductModel.fromMap(p)).toList();
+  }
+
+  static List<ProductModel> getFlashDeals() {
+    final all = dummyProducts;
+    return all.where((p) => p.isFlashDeal).toList();
+  }
+
+  static List<ProductModel> getDailyDeals() {
+    final all = dummyProducts;
+    if (all.isEmpty) return [];
+    return all.take(2).toList();
+  }
+
+  int getEffectiveMoq([ProductVariation? selectedVar]) {
+    if (selectedVar != null && selectedVar.moq != null && selectedVar.moq! > 0) {
+      return selectedVar.moq!;
+    }
+    return moq > 0 ? moq : 1;
+  }
+}
+
+double _toDouble(dynamic val) {
+  if (val == null) return 0.0;
+  if (val is num) return val.toDouble();
+  if (val is String) return double.tryParse(val) ?? 0.0;
+  return 0.0;
+}
+
+int _toInt(dynamic val) {
+  if (val == null) return 0;
+  if (val is num) return val.toInt();
+  if (val is String) {
+    final doubleVal = double.tryParse(val);
+    if (doubleVal != null) return doubleVal.toInt();
+    return int.tryParse(val) ?? 0;
+  }
+  return 0;
+}

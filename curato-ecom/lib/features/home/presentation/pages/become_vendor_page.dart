@@ -1,0 +1,2177 @@
+import 'package:curato_user/core/constants/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_user/core/widgets/curato_layout.dart';
+import 'package:curato_user/core/widgets/centered_content.dart';
+import 'package:curato_user/core/utils/responsive.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
+import 'package:curato_user/core/services/api_service.dart';
+import 'package:curato_user/core/controllers/home_controller.dart';
+import 'package:curato_user/core/controllers/settings_controller.dart';
+import 'package:curato_user/core/widgets/scrollable_terms_dialog.dart';
+
+class BecomeVendorPage extends StatefulWidget {
+  const BecomeVendorPage({super.key});
+
+  @override
+  State<BecomeVendorPage> createState() => _BecomeVendorPageState();
+}
+
+class _BecomeVendorPageState extends State<BecomeVendorPage> {
+  int _currentStep = 0;
+  bool _isLogin = true;
+  final Set<String> _selectedCategories = {};
+  String? _selectedFileName;
+  PlatformFile? _selectedFile;
+
+  // Login Controllers
+  final TextEditingController _loginEmailController = TextEditingController();
+  final TextEditingController _loginPasswordController =
+      TextEditingController();
+
+  // Signup Controllers - Personal
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  // Signup Controllers - Business
+  final TextEditingController _businessNameController = TextEditingController();
+  String _businessType = 'Select type';
+  final TextEditingController _websiteController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _zipCodeController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
+  // Signup Controllers - Products
+  final TextEditingController _avgOrderValueController =
+      TextEditingController();
+  String _monthlyVolume = 'Select volume';
+  final TextEditingController _productDetailsController =
+      TextEditingController();
+
+  // Signup Controllers - Documents
+  final TextEditingController _gstController = TextEditingController();
+  final TextEditingController _bankAccountController = TextEditingController();
+  final TextEditingController _bankNameController = TextEditingController();
+  final TextEditingController _ifscController = TextEditingController();
+
+  bool _agreedToTerms = false;
+  bool _agreedToMarketing = false;
+  bool _obscureLoginPassword = true;
+  bool _obscureSignupPassword = true;
+
+  // Form Keys for validation
+  final _personalFormKey = GlobalKey<FormState>();
+  final _businessFormKey = GlobalKey<FormState>();
+  final _productsFormKey = GlobalKey<FormState>();
+  final _documentsFormKey = GlobalKey<FormState>();
+
+  // Validation States
+  bool _showFileError = false;
+  bool _showCategoryError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _zipCodeController.addListener(_onZipCodeChanged);
+
+    // Listeners for Personal Info validation
+    _firstNameController.addListener(() => setState(() {}));
+    _lastNameController.addListener(() => setState(() {}));
+    _emailController.addListener(() => setState(() {}));
+    _phoneController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _zipCodeController.removeListener(_onZipCodeChanged);
+    _cityController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _loginEmailController.dispose();
+    _loginPasswordController.dispose();
+    _businessNameController.dispose();
+    _websiteController.dispose();
+    _addressController.dispose();
+    _stateController.dispose();
+    _zipCodeController.dispose();
+    _descriptionController.dispose();
+    _avgOrderValueController.dispose();
+    _productDetailsController.dispose();
+    _gstController.dispose();
+    _bankAccountController.dispose();
+    _bankNameController.dispose();
+    _ifscController.dispose();
+    super.dispose();
+  }
+
+  void _onZipCodeChanged() {
+    final zip = _zipCodeController.text.trim();
+    if (zip.length == 6) {
+      _fetchAddressFromZip(zip);
+    }
+  }
+
+  Future<void> _fetchAddressFromZip(String zip) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.postalpincode.in/pincode/$zip'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        if (data.isNotEmpty && data[0]['Status'] == 'Success') {
+          final postOffice = data[0]['PostOffice'][0];
+          setState(() {
+            _cityController.text = postOffice['District'] ?? '';
+            _stateController.text = postOffice['State'] ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching address: $e');
+    }
+  }
+
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: true,
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedFile = result.files.single;
+        _selectedFileName = result.files.single.name;
+      });
+    }
+  }
+
+  void _showTermsAndConditionsPopup() {
+    final String terms = SettingsController.instance.settings.vendorTermsConditions;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ScrollableTermsDialog(
+        title: "Terms & Conditions",
+        termsContent: terms,
+        primaryColor: AppColors.primaryPink,
+        onAccepted: (accepted) {
+          if (accepted) {
+            setState(() {
+              _agreedToTerms = true;
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _submitApplication() async {
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please agree to the Terms & Conditions and Privacy Policy to proceed.',
+          ),
+          backgroundColor: AppColors.primaryPink,
+        ),
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primaryPink),
+      ),
+    );
+
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiService.baseUrl}/vendor/signup'),
+      );
+      // Fields
+      request.fields['firstName'] = _firstNameController.text;
+      request.fields['lastName'] = _lastNameController.text;
+      request.fields['email'] = _emailController.text;
+      request.fields['phone'] = _phoneController.text;
+      request.fields['password'] = _passwordController.text;
+      request.fields['businessName'] = _businessNameController.text;
+      request.fields['businessType'] = _businessType;
+      request.fields['website'] = _websiteController.text;
+      request.fields['address'] = _addressController.text;
+      request.fields['city'] = _cityController.text;
+      request.fields['state'] = _stateController.text;
+      request.fields['zipCode'] = _zipCodeController.text;
+      request.fields['description'] = _descriptionController.text;
+      request.fields['categories'] = jsonEncode(_selectedCategories.toList());
+      request.fields['avgOrderValue'] = _avgOrderValueController.text;
+      request.fields['monthlyVolume'] = _monthlyVolume;
+      request.fields['productDetails'] = _productDetailsController.text;
+      request.fields['gstNumber'] = _gstController.text;
+      request.fields['bankAccount'] = _bankAccountController.text;
+      request.fields['bankName'] = _bankNameController.text;
+      request.fields['ifscCode'] = _ifscController.text;
+
+      // File
+      if (_selectedFile != null && _selectedFile!.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'license',
+            _selectedFile!.bytes!,
+            filename: _selectedFileName,
+          ),
+        );
+      }
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var data = jsonDecode(responseData);
+
+      Navigator.pop(context); // Remove loading
+
+      if (response.statusCode == 201) {
+        String? otp;
+        if (data != null && data is Map) {
+          final vendorData = data['data'];
+          if (vendorData != null && vendorData is Map) {
+            otp = vendorData['whatsappOtp']?.toString();
+          }
+        }
+        _showOTPDialog(_emailController.text, _phoneController.text, otp);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Error submitting application'),
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _showOTPDialog(String email, String phone, String? otp) {
+    final TextEditingController otpController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('Verify Email OTP', style: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter the 6-digit OTP sent to your email address $email'),
+            if (otp != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPink.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'OTP: $otp',
+                  style: GoogleFonts.instrumentSans(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryPink,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                hintText: 'Enter OTP',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final otpVal = otpController.text.trim();
+              if (otpVal.length != 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid 6-digit OTP')),
+                );
+                return;
+              }
+
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryPink),
+                ),
+              );
+
+              try {
+                final response = await http.post(
+                  Uri.parse('${ApiService.baseUrl}/vendor/verify-otp'),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({'phone': phone, 'otp': otpVal}),
+                );
+                
+                Navigator.pop(context); // Close loading dialog
+
+                if (response.statusCode == 200) {
+                  Navigator.pop(context); // Close OTP dialog
+                  
+                  // Show success dialog
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Success'),
+                      content: const Text(
+                        'Email address verified successfully! Please wait for admin approval.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context); // Close success dialog
+                            _toggleMode(true); // Toggle to login mode
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  final data = jsonDecode(response.body);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Verification failed: ${data['message'] ?? 'Unknown error'}')),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(context); // Close loading dialog
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Verification failed: $e')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryPink,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loginVendor() async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primaryPink),
+      ),
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/vendor/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _loginEmailController.text,
+          'password': _loginPasswordController.text,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        // Handle successful login - redirect to vendor panel
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful! Redirecting to Vendor Panel...'),
+          ),
+        );
+
+        final token = data['token'];
+
+        // Define vendor panel URLs for dev and prod
+        final vendorPanelUrl =
+            // kDebugMode
+            //     ? 'http://localhost:5000/#/?token=$token':
+            'https://vendor.curato.asauvia.com/#/?token=$token';
+        Future.delayed(const Duration(seconds: 1), () {
+          html.window.location.href = vendorPanelUrl;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'] ?? 'Login failed')),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _nextStep() {
+    bool isValid = false;
+
+    switch (_currentStep) {
+      case 0:
+        isValid = _personalFormKey.currentState?.validate() ?? false;
+        break;
+      case 1:
+        isValid = _businessFormKey.currentState?.validate() ?? false;
+        if (isValid && _businessType == 'Select type') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please select a business type')),
+          );
+          isValid = false;
+        }
+        break;
+      case 2:
+        isValid = _productsFormKey.currentState?.validate() ?? false;
+        if (_selectedCategories.isEmpty) {
+          setState(() => _showCategoryError = true);
+          isValid = false;
+        } else {
+          setState(() => _showCategoryError = false);
+        }
+        if (isValid && _monthlyVolume == 'Select volume') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select expected monthly volume'),
+            ),
+          );
+          isValid = false;
+        }
+        break;
+      case 3:
+        isValid = _documentsFormKey.currentState?.validate() ?? false;
+        if (_selectedFile == null) {
+          setState(() => _showFileError = true);
+          isValid = false;
+        } else {
+          setState(() => _showFileError = false);
+        }
+        break;
+      case 4:
+        _submitApplication();
+        return;
+    }
+
+    if (isValid) {
+      setState(() => _currentStep++);
+    }
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) setState(() => _currentStep--);
+  }
+
+  void _toggleMode(bool login) {
+    setState(() {
+      _isLogin = login;
+      if (!login) _currentStep = 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 1100;
+    final Color curatoMaroon = AppColors.foreground;
+    final double containerHeight = (screenWidth / 1.77).clamp(800.0, 1080.0);
+
+    Widget formContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _toggleMode(false),
+                  child: _ToggleButton(
+                    title: 'Become a Vendor',
+                    isActive: !_isLogin,
+                    fullWidth: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _toggleMode(true),
+                  child: _ToggleButton(
+                    title: 'Login',
+                    isActive: _isLogin,
+                    fullWidth: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _isLogin
+              ? _buildLoginForm(isMobile)
+              : _buildRegistrationFlow(isMobile),
+        ),
+      ],
+    );
+
+    if (isMobile) {
+      return CuratoLayout(
+        activeTitle: 'BECOME VENDOR',
+        child: Container(
+          color: AppColors.red50,
+          padding: const EdgeInsets.symmetric(vertical: 32),
+          child: CenteredContent(
+            horizontalPadding: 16,
+            child: Column(
+              children: [
+                if (!_isLogin)
+                  Text(
+                    'Become a vendor',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w400,
+                      color: curatoMaroon,
+                    ),
+                  ),
+                if (!_isLogin) const SizedBox(height: 12),
+                Text(
+                  _isLogin
+                      ? 'Access your vendor dashboard to manage your products, orders, and business analytics.'
+                      : 'Join thousands of successful vendors and grow your business with us.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 15,
+                    color: AppColors.mutedForeground,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                formContent,
+                const SizedBox(height: 60),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListenableBuilder(
+      listenable: HomeController.instance,
+      builder: (context, _) {
+        final banner = HomeController.instance.vendorAuthBanner;
+        final ImageProvider imageProvider = banner.imageUrl.startsWith('http')
+            ? NetworkImage(banner.imageUrl)
+            : AssetImage(banner.imageUrl) as ImageProvider;
+
+        return CuratoLayout(
+          activeTitle: 'BECOME VENDOR',
+          child: Container(
+            width: double.infinity,
+            height: containerHeight,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: imageProvider,
+                fit: BoxFit.fill,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Spacer(flex: 65),
+                Expanded(
+                  flex: 35,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 450),
+                        child: formContent,
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(flex: 4),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoginForm(bool isMobile) {
+    final Color curatoMaroon = AppColors.foreground;
+
+    Widget formFields = Column(
+      children: [
+        _FormField(
+          label: 'Email Address *',
+          hintText: 'demo@example.com',
+          controller: _loginEmailController,
+        ),
+        const SizedBox(height: 12),
+        _FormField(
+          label: 'Password *',
+          hintText: '••••••••',
+          isPassword: true,
+          isObscured: _obscureLoginPassword,
+          onToggleVisibility: () =>
+              setState(() => _obscureLoginPassword = !_obscureLoginPassword),
+          controller: _loginPasswordController,
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: _loginVendor,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: curatoMaroon,
+              foregroundColor: AppColors.white,
+              shape: const StadiumBorder(),
+              elevation: 0,
+            ),
+            child: Text(
+              'Sign In',
+              style: GoogleFonts.instrumentSans(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (!isMobile) {
+      return formFields;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: AppColors.red50,
+            child: Icon(
+              Icons.person_outline,
+              size: 28,
+              color: curatoMaroon,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Vendor Login',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 24,
+              fontWeight: FontWeight.w400,
+              color: curatoMaroon,
+            ),
+          ),
+          const SizedBox(height: 32),
+          formFields,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegistrationFlow(bool isMobile) {
+    final Color curatoMaroon = AppColors.foreground;
+
+    Widget formContent = Column(
+      children: [
+        if (isMobile)
+          _MobileProgress(currentStep: _currentStep)
+        else
+          _DesktopProgress(currentStep: _currentStep),
+        const SizedBox(height: 12),
+        const Divider(),
+        const SizedBox(height: 12),
+        _buildStepContent(isMobile),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (_currentStep > 0)
+              _NavBtn(
+                label: 'Back',
+                icon: Icons.arrow_back,
+                onPressed: _previousStep,
+                isPrimary: false,
+              )
+            else
+              const SizedBox(),
+            _NavBtn(
+              label: _currentStep == 4 ? 'Submit Application' : 'Next',
+              icon: _currentStep == 4 ? Icons.check_circle_outline : Icons.arrow_forward,
+              onPressed: _nextStep,
+              isPrimary: true,
+              color: _currentStep == 4 ? AppColors.signal : curatoMaroon,
+              textColor: AppColors.white,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    if (!isMobile) {
+      return formContent;
+    }
+
+    return ListenableBuilder(
+      listenable: HomeController.instance,
+      builder: (context, _) {
+        return Column(
+          children: [
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
+              children: [
+                _BenefitCard(
+                  icon: Icons.attach_money,
+                  title: 'Commission',
+                  desc: 'Low fees',
+                  isMobile: isMobile,
+                ),
+                _BenefitCard(
+                  icon: Icons.public,
+                  title: 'Global',
+                  desc: 'Reach 25+ countries',
+                  isMobile: isMobile,
+                ),
+                _BenefitCard(
+                  icon: Icons.security,
+                  title: 'Secure',
+                  desc: 'Safe payments',
+                  isMobile: isMobile,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: formContent,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStepContent(bool isMobile) {
+    switch (_currentStep) {
+      case 0:
+        return Form(key: _personalFormKey, child: _buildPersonalInfo(isMobile));
+      case 1:
+        return Form(key: _businessFormKey, child: _buildBusinessInfo(isMobile));
+      case 2:
+        return Form(key: _productsFormKey, child: _buildProductsInfo(isMobile));
+      case 3:
+        return Form(
+          key: _documentsFormKey,
+          child: _buildDocumentsInfo(isMobile),
+        );
+      case 4:
+        return _buildReviewInfo(isMobile);
+      default:
+        return const Center(child: Text('Form Section Coming Soon'));
+    }
+  }
+
+  Widget _buildResponsiveRow(bool isMobile, List<Widget> children, {double spacing = 24}) {
+    if (isMobile) {
+      final List<Widget> columnChildren = [];
+      for (int i = 0; i < children.length; i++) {
+        columnChildren.add(children[i]);
+        if (i < children.length - 1) {
+          columnChildren.add(SizedBox(height: spacing / 2));
+        }
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: columnChildren,
+      );
+    }
+    
+    final List<Widget> rowChildren = [];
+    for (int i = 0; i < children.length; i++) {
+      rowChildren.add(Expanded(child: children[i]));
+      if (i < children.length - 1) {
+        rowChildren.add(SizedBox(width: spacing));
+      }
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: rowChildren,
+    );
+  }
+
+  Widget _buildPersonalInfo(bool isMobile) {
+    final double spacing = isMobile ? 24 : 10;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Personal Information',
+          style: GoogleFonts.instrumentSans(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: spacing),
+        _buildResponsiveRow(isMobile, [
+          _FormField(
+            label: 'First Name *',
+            hintText: 'First Name',
+            controller: _firstNameController,
+            validator: (val) =>
+                val == null || val.isEmpty ? 'Required' : null,
+          ),
+          _FormField(
+            label: 'Last Name *',
+            hintText: 'Last Name',
+            controller: _lastNameController,
+            validator: (val) =>
+                val == null || val.isEmpty ? 'Required' : null,
+          ),
+        ], spacing: spacing),
+        SizedBox(height: spacing),
+        _buildResponsiveRow(isMobile, [
+          _FormField(
+            label: 'Email Address *',
+            hintText: 'Email Address',
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Required';
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(val)) {
+                return 'Enter a valid email';
+              }
+              return null;
+            },
+          ),
+          _FormField(
+            label: 'Phone Number *',
+            hintText: '1234567890',
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            prefixText: '+91 ',
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Required';
+              if (val.length != 10) return 'Must be 10 digits';
+              return null;
+            },
+          ),
+        ], spacing: spacing),
+        SizedBox(height: spacing),
+        _FormField(
+          label: 'Password *',
+          hintText: 'Create a strong password',
+          isPassword: true,
+          isObscured: _obscureSignupPassword,
+          onToggleVisibility: () =>
+              setState(() => _obscureSignupPassword = !_obscureSignupPassword),
+          controller: _passwordController,
+          validator: (val) {
+            if (val == null || val.isEmpty) return 'Required';
+            if (val.length < 8) return 'Password must be at least 8 characters';
+            if (!RegExp(r'[A-Z]').hasMatch(val)) {
+              return 'Must contain at least one uppercase letter';
+            }
+            if (!RegExp(r'[a-z]').hasMatch(val)) {
+              return 'Must contain at least one lowercase letter';
+            }
+            if (!RegExp(r'[0-9]').hasMatch(val)) {
+              return 'Must contain at least one number';
+            }
+            if (!RegExp(r'[!@#\$&*~%^()_+=|<>?{}]').hasMatch(val)) {
+              return 'Must contain at least one special character';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBusinessInfo(bool isMobile) {
+    final double spacing = isMobile ? 24 : 10;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Business Information',
+          style: GoogleFonts.instrumentSans(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: spacing),
+        _buildResponsiveRow(isMobile, [
+          _FormField(
+            label: 'Business Name *',
+            hintText: 'Enter business name',
+            controller: _businessNameController,
+            validator: (val) =>
+                val == null || val.isEmpty ? 'Required' : null,
+          ),
+          _DropdownField(
+            label: 'Business Type *',
+            items: const [
+              'Select type',
+              'Manufacturer',
+              'Wholesaler',
+              'Retailer',
+              'Trader',
+              'Independent',
+            ],
+            value: _businessType,
+            onChanged: (val) => setState(() => _businessType = val!),
+          ),
+        ], spacing: spacing),
+        SizedBox(height: spacing),
+        _FormField(
+          label: 'Business Website (Optional)',
+          hintText: 'https://www.example.com',
+          controller: _websiteController,
+        ),
+        SizedBox(height: spacing),
+        _FormField(
+          label: 'Business Address *',
+          hintText: 'Enter street address',
+          controller: _addressController,
+          validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+        ),
+        SizedBox(height: spacing),
+        _buildResponsiveRow(isMobile, [
+          _FormField(
+            label: 'City *',
+            hintText: 'City',
+            controller: _cityController,
+            validator: (val) =>
+                val == null || val.isEmpty ? 'Required' : null,
+          ),
+          _FormField(
+            label: 'State *',
+            hintText: 'State',
+            controller: _stateController,
+            validator: (val) =>
+                val == null || val.isEmpty ? 'Required' : null,
+          ),
+          _FormField(
+            label: 'Zip Code *',
+            hintText: 'Zip Code',
+            controller: _zipCodeController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Required';
+              if (val.length != 6) return 'Must be 6 digits';
+              return null;
+            },
+          ),
+        ], spacing: spacing),
+        SizedBox(height: spacing),
+        _FormField(
+          label: 'Business Description',
+          hintText: 'Briefly describe your business...',
+          maxLines: 3,
+          controller: _descriptionController,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductsInfo(bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Product Information',
+          style: GoogleFonts.instrumentSans(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Product Categories * (Select all that apply)',
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.foreground,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _showCategoryError ? AppColors.errorRed : AppColors.border,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              _buildCategoryGrid(
+                HomeController.instance.categories.isNotEmpty
+                    ? HomeController.instance.categories
+                          .map((c) => c['name'].toString())
+                          .toList()
+                    : [
+                        'Electronics',
+                        'Fashion & Clothing',
+                        'Home & Garden',
+                        'Beauty & Personal Care',
+                        'Sports & Outdoors',
+                        'Books & Media',
+                        'Toys & Games',
+                        'Automotive',
+                        'Health & Wellness',
+                        'Food & Beverages',
+                      ],
+                isMobile,
+              ),
+            ],
+          ),
+        ),
+        if (_showCategoryError)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 4),
+            child: Text(
+              'Please select at least one category',
+              style: GoogleFonts.instrumentSans(color: AppColors.errorRed, fontSize: 12),
+            ),
+          ),
+        const SizedBox(height: 24),
+        if (isMobile) ...[
+          _FormField(
+            label: 'Average Order Value (₹) *',
+            hintText: 'e.g. 500',
+            controller: _avgOrderValueController,
+            keyboardType: TextInputType.number,
+            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+          ),
+          const SizedBox(height: 24),
+          _DropdownField(
+            label: 'Expected Monthly Volume',
+            items: const [
+              'Select volume',
+              '1-10 orders',
+              '11-50 orders',
+              '51-100 orders',
+              '101-500 orders',
+              '500+ orders',
+            ],
+            value: _monthlyVolume,
+            onChanged: (val) => setState(() => _monthlyVolume = val!),
+          ),
+        ] else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _FormField(
+                  label: 'Average Order Value (₹) *',
+                  hintText: 'e.g. 500',
+                  controller: _avgOrderValueController,
+                  keyboardType: TextInputType.number,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Required' : null,
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: _DropdownField(
+                  label: 'Expected Monthly Volume',
+                  items: const [
+                    'Select volume',
+                    '1-10 orders',
+                    '11-50 orders',
+                    '51-100 orders',
+                    '101-500 orders',
+                    '500+ orders',
+                  ],
+                  value: _monthlyVolume,
+                  onChanged: (val) => setState(() => _monthlyVolume = val!),
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 24),
+        _FormField(
+          label: 'Product Types & Details *',
+          hintText: 'Describe details...',
+          maxLines: 4,
+          controller: _productDetailsController,
+          validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryGrid(List<String> categories, bool isMobile) {
+    if (isMobile) {
+      return Column(
+        children: categories
+            .map(
+              (cat) => _CheckboxItem(
+                label: cat,
+                value: _selectedCategories.contains(cat),
+                onChanged: (val) {
+                  setState(() {
+                    if (val == true) {
+                      _selectedCategories.add(cat);
+                    } else {
+                      _selectedCategories.remove(cat);
+                    }
+                  });
+                },
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    List<Widget> rows = [];
+    for (int i = 0; i < categories.length; i += 2) {
+      rows.add(
+        Row(
+          children: [
+            Expanded(child: _buildCheckbox(categories[i])),
+            if (i + 1 < categories.length)
+              Expanded(child: _buildCheckbox(categories[i + 1])),
+          ],
+        ),
+      );
+    }
+    return Column(children: rows);
+  }
+
+  Widget _buildCheckbox(String label) {
+    return _CheckboxItem(
+      label: label,
+      value: _selectedCategories.contains(label),
+      onChanged: (val) {
+        setState(() {
+          if (val == true) {
+            _selectedCategories.add(label);
+          } else {
+            _selectedCategories.remove(label);
+          }
+        });
+      },
+    );
+  }
+
+  Widget _buildDocumentsInfo(bool isMobile) {
+    final double spacing = isMobile ? 24 : 10;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Required Documents',
+          style: GoogleFonts.instrumentSans(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: spacing),
+        _DashedUploadBox(
+          label: 'Business License/Registration/GST Certificate *',
+          hint:
+              _selectedFileName ??
+              'Upload your business license, registration, or GST certificate',
+          onTap: _pickFile,
+          hasError: _showFileError,
+        ),
+        SizedBox(height: spacing),
+        _buildResponsiveRow(isMobile, [
+          _FormField(
+            label: 'GST Number *',
+            hintText: 'Enter GST number',
+            controller: _gstController,
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Required';
+              if (!RegExp(
+                r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
+              ).hasMatch(val)) {
+                return 'Enter a valid GST number e.g. 29ABCDE1234F1Z5';
+              }
+              return null;
+            },
+          ),
+          _FormField(
+            label: 'Bank Name *',
+            hintText: 'Enter bank name',
+            controller: _bankNameController,
+            validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+          ),
+        ], spacing: spacing),
+        SizedBox(height: spacing),
+        _buildResponsiveRow(isMobile, [
+          _FormField(
+            label: 'Bank Account Number *',
+            hintText: 'Enter full bank account number',
+            controller: _bankAccountController,
+            keyboardType: TextInputType.number,
+            validator: (val) =>
+                val == null || val.isEmpty ? 'Required' : null,
+          ),
+          _FormField(
+            label: 'IFSC Code *',
+            hintText: 'Enter IFSC code',
+            controller: _ifscController,
+            validator: (val) {
+              if (val == null || val.isEmpty) return 'Required';
+              if (!RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$').hasMatch(val)) {
+                return 'Enter a valid IFSC code e.g. SBIN0000001';
+              }
+              return null;
+            },
+          ),
+        ], spacing: spacing),
+        SizedBox(height: spacing),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.muted,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.muted),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.info_outline,
+                color: AppColors.foreground,
+                size: 18,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Note: All documents will be securely stored and used only for verification purposes. We support PDF, JPG, JPEG, and PNG formats up to 10MB.',
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 13,
+                    color: AppColors.foreground,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewInfo(bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Review Your Application',
+          style: GoogleFonts.instrumentSans(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 32),
+
+        _buildReviewSection(
+          title: 'Personal Information',
+          content:
+              '${_firstNameController.text} ${_lastNameController.text} • ${_emailController.text} • ${_phoneController.text}',
+        ),
+        const SizedBox(height: 24),
+        _buildReviewSection(
+          title: 'Business Information',
+          content:
+              '${_businessNameController.text} • $_businessType • ${_cityController.text}, ${_stateController.text}',
+        ),
+        const SizedBox(height: 24),
+        _buildReviewSection(
+          title: 'Product Categories',
+          content: _selectedCategories.isEmpty
+              ? 'None selected'
+              : _selectedCategories.join(', '),
+        ),
+        const SizedBox(height: 24),
+        _buildReviewSection(
+          title: 'Documents & Banking',
+          content:
+              'GST: ${_gstController.text} • Bank: ${_bankNameController.text} • A/C: ${_bankAccountController.text} • IFSC: ${_ifscController.text}',
+        ),
+
+        const SizedBox(height: 40),
+
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: _agreedToTerms,
+                onChanged: (v) {
+                  if (v == true) {
+                    _showTermsAndConditionsPopup();
+                  } else {
+                    setState(() => _agreedToTerms = false);
+                  }
+                },
+                activeColor: AppColors.primaryPink,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  if (!_agreedToTerms) {
+                    _showTermsAndConditionsPopup();
+                  } else {
+                    setState(() => _agreedToTerms = false);
+                  }
+                },
+                child: RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 14,
+                      color: AppColors.mutedForeground,
+                    ),
+                    children: [
+                      const TextSpan(text: 'I agree to the '),
+                      TextSpan(
+                        text: 'Terms & Conditions',
+                        style: GoogleFonts.instrumentSans(
+                          color: AppColors.primaryPink,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const TextSpan(text: ' and '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: GoogleFonts.instrumentSans(
+                          color: AppColors.primaryPink,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: Checkbox(
+                value: _agreedToMarketing,
+                onChanged: (v) =>
+                    setState(() => _agreedToMarketing = v ?? false),
+                activeColor: AppColors.primaryPink,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: () =>
+                    setState(() => _agreedToMarketing = !_agreedToMarketing),
+                child: Text(
+                  'I consent to receive marketing communications and updates about vendor opportunities',
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 14,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewSection({required String title, required String content}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.foreground,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          content,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            color: AppColors.mutedForeground,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ToggleButton extends StatelessWidget {
+  final String title;
+  final bool isActive;
+  final bool fullWidth;
+  const _ToggleButton({
+    required this.title,
+    required this.isActive,
+    this.fullWidth = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: fullWidth ? double.infinity : 200,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.primaryPink : AppColors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        title,
+        style: GoogleFonts.instrumentSans(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: isActive ? AppColors.white : AppColors.mutedForeground,
+        ),
+      ),
+    );
+  }
+}
+
+class _BenefitCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String desc;
+  final bool isMobile;
+  const _BenefitCard({
+    required this.icon,
+    required this.title,
+    required this.desc,
+    required this.isMobile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: isMobile ? double.infinity : 220,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.primaryPink, size: 32),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: GoogleFonts.instrumentSans(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            desc,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.instrumentSans(
+              fontSize: 13,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopProgress extends StatelessWidget {
+  final int currentStep;
+  const _DesktopProgress({required this.currentStep});
+
+  static const steps = [
+    {
+      'icon': Icons.person_outline,
+      'title': 'Personal',
+    },
+    {
+      'icon': Icons.domain,
+      'title': 'Business',
+    },
+    {
+      'icon': Icons.inventory_2_outlined,
+      'title': 'Products',
+    },
+    {
+      'icon': Icons.description_outlined,
+      'title': 'Documents',
+    },
+    {
+      'icon': Icons.check_circle_outline,
+      'title': 'Review',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(
+        5,
+        (index) => Expanded(
+          child: _StepIcon(
+            index: index,
+            active: currentStep >= index,
+            icon: steps[index]['icon'] as IconData,
+            title: steps[index]['title'] as String,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileProgress extends StatelessWidget {
+  final int currentStep;
+  const _MobileProgress({required this.currentStep});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color curatoMaroon = AppColors.foreground;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        5,
+        (index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: CircleAvatar(
+            radius: 4,
+            backgroundColor: currentStep >= index
+                ? curatoMaroon
+                : AppColors.border,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepIcon extends StatelessWidget {
+  final int index;
+  final bool active;
+  final IconData icon;
+  final String title;
+
+  const _StepIcon({
+    required this.index,
+    required this.active,
+    required this.icon,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color curatoMaroon = AppColors.foreground;
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: active
+              ? curatoMaroon
+              : AppColors.muted,
+          child: Icon(
+            icon,
+            color: active ? AppColors.white : AppColors.mutedForeground,
+            size: 24,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 12,
+            color: active ? curatoMaroon : AppColors.foreground,
+            fontWeight: active ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashedUploadBox extends StatelessWidget {
+  final String label;
+  final String hint;
+  final VoidCallback onTap;
+  final bool hasError;
+  const _DashedUploadBox({
+    required this.label,
+    required this.hint,
+    required this.onTap,
+    this.hasError = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.foreground,
+          ),
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            height: 240,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: hasError
+                  ? AppColors.red50
+                  : AppColors.background,
+            ),
+            child: CustomPaint(
+              painter: _DashPainter(
+                color: hasError ? AppColors.errorRed : AppColors.border,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 54,
+                    color: hasError ? AppColors.errorRed : _hintColor(),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    hint,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 14,
+                      color: hasError ? AppColors.errorRed : _hintColor(),
+                      fontWeight: _selectedFileName()
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: onTap,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.white,
+                      foregroundColor: AppColors.foreground,
+                      side: const BorderSide(color: AppColors.border),
+                      elevation: 0,
+                      shadowColor: AppColors.transparent,
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                    ),
+                    child: Text(
+                      _selectedFileName() ? 'Change File' : 'Choose File',
+                      style: GoogleFonts.instrumentSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _hintColor() {
+    return _selectedFileName()
+        ? AppColors.primaryPink
+        : AppColors.mutedForeground;
+  }
+
+  bool _selectedFileName() {
+    return !hint.contains('Upload your business license');
+  }
+}
+
+class _DashPainter extends CustomPainter {
+  final Color color;
+  _DashPainter({this.color = AppColors.border});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 8.0;
+    const dashSpace = 6.0;
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          const Radius.circular(12),
+        ),
+      );
+
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(
+          metric.extractPath(distance, distance + dashWidth),
+          paint,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DropdownField extends StatelessWidget {
+  final String label;
+  final List<String> items;
+  final String? value;
+  final ValueChanged<String?>? onChanged;
+  const _DropdownField({
+    required this.label,
+    required this.items,
+    this.value,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.foreground,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: value ?? items.first,
+          dropdownColor: AppColors.white,
+          icon: const Icon(Icons.expand_more, color: AppColors.mutedForeground),
+          items: items
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 14,
+                      color: AppColors.foreground,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            filled: true,
+            fillColor: AppColors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: AppColors.primaryPink,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CheckboxItem extends StatelessWidget {
+  final String label;
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+  const _CheckboxItem({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Checkbox(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppColors.foreground,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.instrumentSans(
+              fontSize: 14,
+              color: AppColors.mutedForeground,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DocumentUploadField extends StatelessWidget {
+  final String title;
+  final String desc;
+  const _DocumentUploadField({required this.title, required this.desc});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Icon(
+              Icons.cloud_upload_outlined,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.foreground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 12,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.white,
+              foregroundColor: AppColors.foreground,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: AppColors.border),
+              ),
+            ),
+            child: Text(
+              'Browse',
+              style: GoogleFonts.instrumentSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormField extends StatelessWidget {
+  final String label;
+  final String hintText;
+  final bool isPassword;
+  final bool isObscured;
+  final VoidCallback? onToggleVisibility;
+  final int maxLines;
+  final TextEditingController? controller;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final String? prefixText;
+  final String? Function(String?)? validator;
+
+  const _FormField({
+    required this.label,
+    required this.hintText,
+    this.isPassword = false,
+    this.isObscured = true,
+    this.onToggleVisibility,
+    this.maxLines = 1,
+    this.controller,
+    this.keyboardType,
+    this.inputFormatters,
+    this.prefixText,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.foreground,
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword && isObscured,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          validator: validator,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          style: GoogleFonts.instrumentSans(
+            color: AppColors.foreground,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixText: prefixText,
+            prefixStyle: GoogleFonts.instrumentSans(
+              color: AppColors.foreground,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            hintStyle: GoogleFonts.instrumentSans(
+              color: AppColors.mutedForeground,
+              fontSize: 14,
+            ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      isObscured
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: AppColors.mutedForeground,
+                      size: 20,
+                    ),
+                    onPressed: onToggleVisibility,
+                  )
+                : null,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            filled: true,
+            fillColor: AppColors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: AppColors.foreground,
+                width: 1.5,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.errorRed, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NavBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool isPrimary;
+  final bool isDisabled;
+  final Color? color;
+  final Color? textColor;
+
+  const _NavBtn({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    required this.isPrimary,
+    this.isDisabled = false,
+    this.color,
+    this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = isDisabled
+        ? AppColors.grey300
+        : (color ?? (isPrimary ? AppColors.primaryPink : AppColors.white));
+    final fgColor = isDisabled
+        ? AppColors.grey500
+        : (textColor ?? (isPrimary ? AppColors.white : AppColors.foreground));
+
+    return ElevatedButton.icon(
+      onPressed: isDisabled ? null : onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: bgColor,
+        foregroundColor: fgColor,
+        disabledBackgroundColor: AppColors.grey200,
+        disabledForegroundColor: AppColors.grey500,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: isPrimary || isDisabled
+                ? AppColors.transparent
+                : AppColors.border,
+          ),
+        ),
+      ),
+    );
+  }
+}

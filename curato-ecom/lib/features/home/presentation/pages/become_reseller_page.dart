@@ -1,0 +1,1033 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_user/core/widgets/curato_layout.dart';
+import 'package:curato_user/core/widgets/centered_content.dart';
+import 'package:curato_user/core/utils/responsive.dart';
+import 'package:curato_user/core/constants/app_colors.dart';
+import 'package:curato_user/core/services/session_service.dart';
+import 'package:curato_user/core/services/api_service.dart';
+import 'package:curato_user/features/auth/application/auth_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:html' as html;
+import 'package:curato_user/core/controllers/settings_controller.dart';
+import 'package:curato_user/core/widgets/scrollable_terms_dialog.dart';
+
+import '../../../auth/domain/models/user_model.dart';
+import 'package:curato_user/core/controllers/home_controller.dart';
+
+class BecomeResellerPage extends StatefulWidget {
+  const BecomeResellerPage({super.key});
+
+  @override
+  State<BecomeResellerPage> createState() => _BecomeResellerPageState();
+}
+
+class _BecomeResellerPageState extends State<BecomeResellerPage> {
+  final _accountFormKey = GlobalKey<FormState>();
+  final _bankFormKey = GlobalKey<FormState>();
+  final _taxFormKey = GlobalKey<FormState>();
+  int _currentStep = 0;
+  bool _isLoading = false;
+  bool _agreedToTerms = false;
+
+  // Toggle mode between login and application signup
+  bool _isLogin = true;
+
+  // Login controllers
+  final TextEditingController _loginEmailController = TextEditingController();
+  final TextEditingController _loginPasswordController =
+      TextEditingController();
+  final bool _obscureLoginPassword = true;
+
+  // Registration Controllers (For unexisting/logged-out users)
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  // Reseller Application Controllers
+  final TextEditingController _accountHolderController =
+      TextEditingController();
+  final TextEditingController _bankNameController = TextEditingController();
+  final TextEditingController _accountNumberController =
+      TextEditingController();
+  final TextEditingController _ifscController = TextEditingController();
+  final TextEditingController _upiIdController = TextEditingController();
+  final TextEditingController _panController = TextEditingController();
+  final TextEditingController _gstController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _mobileController.dispose();
+    _passwordController.dispose();
+    _accountHolderController.dispose();
+    _bankNameController.dispose();
+    _accountNumberController.dispose();
+    _ifscController.dispose();
+    _upiIdController.dispose();
+    _panController.dispose();
+    _gstController.dispose();
+    _loginEmailController.dispose();
+    _loginPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loginReseller() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _loginEmailController.text.trim(),
+          'password': _loginPasswordController.text.trim(),
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Successful login
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful! Redirecting to Reseller Panel...'),
+          ),
+        );
+
+        final token = data['token'];
+        final userMap = data['user'];
+        if (userMap != null) {
+          final user = UserModel.fromJson(userMap);
+          SessionService.instance.setUser(user, token: token);
+        }
+
+        final resellerPanelUrl =
+            'http://reseller.curato.asauvia.com/#/?token=$token';
+        print('Reseller Panel Redirect URL: $resellerPanelUrl');
+        Future.delayed(const Duration(seconds: 1), () {
+          html.window.location.href = resellerPanelUrl;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Login failed'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.errorRed),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showTermsAndConditionsPopup() {
+    final String terms = SettingsController.instance.settings.termsConditions;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ScrollableTermsDialog(
+        title: "Terms & Conditions",
+        termsContent: terms,
+        primaryColor: AppColors.primaryPink,
+        onAccepted: (accepted) {
+          if (accepted) {
+            setState(() {
+              _agreedToTerms = true;
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _submitApplication() async {
+    if (!_taxFormKey.currentState!.validate()) return;
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please accept the Terms & Conditions to proceed.'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Step 1: Register the new user
+      final authService = AuthService();
+      final regResult = await authService.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        gender: "other",
+        mobile: _mobileController.text.trim(),
+      );
+
+      if (!regResult.success) {
+        throw Exception(regResult.message);
+      }
+
+      // Step 2: Log in the user to obtain session and token
+      final loginResult = await authService.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      if (!loginResult.success || loginResult.token == null) {
+        throw Exception(loginResult.message);
+      }
+
+      final token = loginResult.token;
+      SessionService.instance.setUser(loginResult.user, token: token);
+
+      // Step 3: Apply for reseller status with the active session token
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/reseller/apply'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'bankDetails': {
+            'bankName': _bankNameController.text.trim(),
+            'accountNumber': _accountNumberController.text.trim(),
+            'ifsc': _ifscController.text.trim().toUpperCase(),
+            'accountHolderName': _accountHolderController.text.trim(),
+          },
+          'upiDetails': {'upiId': _upiIdController.text.trim()},
+          'panNumber': _panController.text.trim().toUpperCase(),
+          'gstNumber': _gstController.text.trim().toUpperCase(),
+        }),
+      );
+
+      dynamic data;
+      try {
+        data = jsonDecode(response.body);
+      } catch (e) {
+        throw FormatException(
+          'Server returned an invalid response (not JSON). Please make sure your local backend server is running. Status Code: ${response.statusCode}',
+        );
+      }
+
+      if (response.statusCode == 201) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Application Submitted'),
+            content: const Text(
+              'Your reseller registration has been received successfully! Our admin team will verify and approve your account shortly.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, '/');
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              data['message'] ?? 'Failed to submit reseller application',
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.errorRed),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _toggleMode(bool login) {
+    setState(() {
+      _isLogin = login;
+      _currentStep = 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isMobile = Responsive.isMobile(context);
+
+    final Widget formContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: isMobile
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _toggleMode(false),
+                      child: _ToggleButton(
+                        title: 'Become a Reseller',
+                        isActive: !_isLogin,
+                        fullWidth: true,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () => _toggleMode(true),
+                      child: _ToggleButton(
+                        title: 'Login',
+                        isActive: _isLogin,
+                        fullWidth: true,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _toggleMode(false),
+                        child: _ToggleButton(
+                          title: 'Become a Reseller',
+                          isActive: !_isLogin,
+                          fullWidth: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _toggleMode(true),
+                        child: _ToggleButton(
+                          title: 'Login',
+                          isActive: _isLogin,
+                          fullWidth: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 40),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _isLogin
+              ? _buildLoginForm(isMobile)
+              : _buildApplicationForm(isMobile),
+        ),
+      ],
+    );
+
+    if (isMobile) {
+      return CuratoLayout(
+        activeTitle: 'BECOME RESELLER',
+        child: Container(
+          color: AppColors.background,
+          padding: const EdgeInsets.symmetric(vertical: 32),
+          child: CenteredContent(
+            horizontalPadding: 16,
+            child: Column(
+              children: [
+                if (!_isLogin) ...[
+                  Text(
+                    'Become a Reseller',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.foreground,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Text(
+                  _isLogin
+                      ? 'Access your reseller dashboard to manage your products, referrals, and earnings.'
+                      : 'Promote high-quality products and earn direct commissions on every purchase.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 15,
+                    color: AppColors.mutedForeground,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                formContent,
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double containerHeight = (screenWidth / 1.77).clamp(800.0, 1080.0);
+
+    return ListenableBuilder(
+      listenable: HomeController.instance,
+      builder: (context, _) {
+        final banner = HomeController.instance.resellerAuthBanner;
+        final ImageProvider imageProvider = banner.imageUrl.startsWith('http')
+            ? NetworkImage(banner.imageUrl)
+            : AssetImage(banner.imageUrl) as ImageProvider;
+
+        return CuratoLayout(
+          activeTitle: 'BECOME RESELLER',
+          child: Container(
+            width: double.infinity,
+            height: containerHeight,
+            decoration: BoxDecoration(
+              image: DecorationImage(image: imageProvider, fit: BoxFit.fill),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Spacer(flex: 65),
+                Expanded(
+                  flex: 31,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(
+                        left: 24,
+                        right: 24,
+                        top: 40,
+                        bottom: 150,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 450),
+                        child: formContent,
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(flex: 4),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoginForm(bool isMobile) {
+    Widget formFields = Column(
+      children: [
+        _buildTextFormField(
+          controller: _loginEmailController,
+          label: 'Email Address *',
+          hint: 'demo@example.com',
+          validator: (v) =>
+              v == null || v.isEmpty ? 'Please enter email' : null,
+        ),
+        const SizedBox(height: 20),
+        _buildTextFormField(
+          controller: _loginPasswordController,
+          label: 'Password *',
+          hint: '••••••••',
+          obscureText: _obscureLoginPassword,
+          validator: (v) =>
+              v == null || v.length < 6 ? 'Password too short' : null,
+        ),
+        const SizedBox(height: 32),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _loginReseller,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.foreground,
+              foregroundColor: AppColors.white,
+              shape: const StadiumBorder(),
+              elevation: 0,
+            ),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: AppColors.white)
+                : Text(
+                    'Sign In',
+                    style: GoogleFonts.instrumentSans(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+
+    if (!isMobile) {
+      return formFields;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: AppColors.muted,
+            child: const Icon(
+              Icons.person_outline,
+              size: 28,
+              color: AppColors.primaryIndigo,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Reseller Login',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 24,
+              fontWeight: FontWeight.w400,
+              color: AppColors.foreground,
+            ),
+          ),
+          const SizedBox(height: 32),
+          formFields,
+          const SizedBox(height: 24),
+          TextButton(
+            onPressed: () => _toggleMode(false),
+            child: Text(
+              'New here? Become a Reseller',
+              style: GoogleFonts.instrumentSans(
+                color: AppColors.primaryIndigo,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplicationForm(bool isMobile) {
+    final Widget progressIndicator = isMobile
+        ? _ResellerMobileProgress(currentStep: _currentStep)
+        : _ResellerDesktopProgress(currentStep: _currentStep);
+
+    Widget stepContent;
+    switch (_currentStep) {
+      case 0:
+        stepContent = Form(
+          key: _accountFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '1. Create Account',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.foreground,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildTextFormField(
+                controller: _nameController,
+                label: 'Full Name *',
+                hint: 'Enter your full name',
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty)
+                    return 'Please enter your name';
+                  if (v.trim().length < 3)
+                    return 'Name must be at least 3 characters';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _emailController,
+                label: 'Email Address *',
+                hint: 'you@example.com',
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Please enter email';
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(v)) {
+                    return 'Please enter a valid email address';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _mobileController,
+                label: 'Mobile Number *',
+                hint: '10-digit number',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                validator: (v) {
+                  if (v == null || v.isEmpty)
+                    return 'Please enter mobile number';
+                  if (v.length != 10) {
+                    return 'Please enter exactly 10 digits';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _passwordController,
+                label: 'Password *',
+                hint: 'Choose a strong password',
+                obscureText: true,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Please enter password';
+                  if (v.length < 6)
+                    return 'Password must be at least 6 characters';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        );
+        break;
+      case 1:
+        stepContent = Form(
+          key: _bankFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '2. Bank Details & UPI',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.foreground,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildTextFormField(
+                controller: _accountHolderController,
+                label: 'Account Holder Name *',
+                hint: 'Name as in bank records',
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Please enter account holder name'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _bankNameController,
+                label: 'Bank Name *',
+                hint: 'e.g. HDFC Bank, SBI',
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Please enter bank name'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _accountNumberController,
+                label: 'Account Number *',
+                hint: 'Enter account number',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(18),
+                ],
+                validator: (v) {
+                  if (v == null || v.isEmpty)
+                    return 'Please enter account number';
+                  if (v.length < 9 || v.length > 18) {
+                    return 'Please enter a valid account number (9 to 18 digits)';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _ifscController,
+                label: 'IFSC Code *',
+                hint: 'e.g. HDFC0001234',
+                inputFormatters: [LengthLimitingTextInputFormatter(11)],
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Please enter IFSC code';
+                  if (!RegExp(
+                    r'^[A-Z]{4}0[A-Z0-9]{6}$',
+                  ).hasMatch(v.toUpperCase())) {
+                    return 'Please enter a valid 11-character IFSC code';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _upiIdController,
+                label: 'UPI ID *',
+                hint: 'e.g. name@upi',
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Please enter UPI ID';
+                  if (!v.contains('@')) {
+                    return 'Please enter a valid UPI ID (e.g. name@upi)';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        );
+        break;
+      case 2:
+      default:
+        stepContent = Form(
+          key: _taxFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '3. Tax Information (Optional)',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.foreground,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildTextFormField(
+                controller: _panController,
+                label: 'PAN Number',
+                hint: 'ABCDE1234F',
+                validator: (v) {
+                  if (v != null && v.isNotEmpty) {
+                    if (!RegExp(
+                      r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$',
+                    ).hasMatch(v.toUpperCase())) {
+                      return 'Please enter a valid 10-character PAN number';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextFormField(
+                controller: _gstController,
+                label: 'GST Number',
+                hint: '22AAAAA0000A1Z5',
+                validator: (v) {
+                  if (v != null && v.isNotEmpty) {
+                    if (!RegExp(
+                      r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
+                    ).hasMatch(v.toUpperCase())) {
+                      return 'Please enter a valid 15-character GST number';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: _agreedToTerms,
+                    activeColor: AppColors.primaryPink,
+                    onChanged: (v) {
+                      if (v == true) {
+                        _showTermsAndConditionsPopup();
+                      } else {
+                        setState(() => _agreedToTerms = false);
+                      }
+                    },
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        'I accept the Reseller Agreement Terms & Conditions and authorize ASAUViA to process commission payouts to the provided account details.',
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 13,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        break;
+    }
+
+    final Widget navButtons = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (_currentStep > 0)
+          ElevatedButton(
+            onPressed: () => setState(() => _currentStep--),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: AppColors.foreground,
+              shadowColor: Colors.transparent,
+              side: const BorderSide(color: AppColors.foreground),
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.arrow_back, size: 16),
+                SizedBox(width: 8),
+                Text('Back', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          )
+        else
+          const SizedBox(),
+        ElevatedButton(
+          onPressed: () {
+            if (_currentStep == 0) {
+              if (_accountFormKey.currentState!.validate()) {
+                setState(() => _currentStep = 1);
+              }
+            } else if (_currentStep == 1) {
+              if (_bankFormKey.currentState!.validate()) {
+                setState(() => _currentStep = 2);
+              }
+            } else {
+              _submitApplication();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.foreground,
+            foregroundColor: AppColors.white,
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+          child: Row(
+            children: [
+              Text(
+                _currentStep == 2 ? 'Apply as Reseller' : 'Next',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (_currentStep < 2) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward, size: 16),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final Widget formFields = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        progressIndicator,
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 16),
+        stepContent,
+        const SizedBox(height: 32),
+        navButtons,
+      ],
+    );
+
+    if (!isMobile) {
+      return formFields;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: formFields,
+    );
+  }
+
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    bool obscureText = false,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.foreground,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          validator: validator,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          style: const TextStyle(color: AppColors.black),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.white,
+            hintText: hint,
+            hintStyle: GoogleFonts.instrumentSans(color: AppColors.grey, fontSize: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.foreground, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ToggleButton extends StatelessWidget {
+  final String title;
+  final bool isActive;
+  final bool fullWidth;
+  const _ToggleButton({
+    required this.title,
+    required this.isActive,
+    this.fullWidth = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: fullWidth ? double.infinity : 200,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.foreground : AppColors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        title,
+        style: GoogleFonts.instrumentSans(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: isActive ? AppColors.white : AppColors.mutedForeground,
+        ),
+      ),
+    );
+  }
+}
+
+class _ResellerDesktopProgress extends StatelessWidget {
+  final int currentStep;
+  const _ResellerDesktopProgress({required this.currentStep});
+
+  static const steps = [
+    {'icon': Icons.person_outline, 'title': 'Account'},
+    {'icon': Icons.account_balance_outlined, 'title': 'Bank Details'},
+    {'icon': Icons.description_outlined, 'title': 'Tax & Apply'},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(
+        3,
+        (index) => Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: currentStep >= index
+                    ? AppColors.foreground
+                    : AppColors.muted,
+                child: Icon(
+                  steps[index]['icon'] as IconData,
+                  color: currentStep >= index
+                      ? AppColors.white
+                      : AppColors.mutedForeground,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                steps[index]['title'] as String,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 12,
+                  color: currentStep >= index
+                      ? AppColors.foreground
+                      : AppColors.foreground,
+                  fontWeight: currentStep >= index
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ResellerMobileProgress extends StatelessWidget {
+  final int currentStep;
+  const _ResellerMobileProgress({required this.currentStep});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        3,
+        (index) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Container(
+            width: index == currentStep ? 24 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: index == currentStep
+                  ? AppColors.foreground
+                  : AppColors.border,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

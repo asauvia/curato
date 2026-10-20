@@ -1,0 +1,29 @@
+# Secrets: never commit real environment files
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+dist/
+*.log
+
+# Flutter and Dart
+.dart_tool/
+.fvm/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/android/local.properties
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/Pods/
+
+# Android
+**/.gradle/

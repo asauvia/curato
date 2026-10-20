@@ -1,0 +1,9 @@
+{
+  "name": "curato-ecom",
+  "version": "1.0.0",
+  "description": "CURATO Ecommerce Web Application",
+  "scripts": {
+    "generate-sitemap": "node scripts/generate-sitemap.js",
+    "build": "node scripts/generate-sitemap.js && sh build.sh"
+  }
+}

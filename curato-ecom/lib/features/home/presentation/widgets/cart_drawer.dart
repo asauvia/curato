@@ -1,0 +1,770 @@
+import 'package:curato_user/core/constants/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_user/features/cart/application/cart_controller.dart';
+import 'package:curato_user/features/cart/presentation/pages/checkout_page.dart';
+
+class CartDrawer extends StatefulWidget {
+  final String? addedProductName;
+  const CartDrawer({super.key, this.addedProductName});
+
+  /// Opens the cart as a left-sliding panel confirming added product
+  static void showSlider(BuildContext context, {String? addedProductName}) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Cart',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (ctx, anim1, anim2) {
+        final double screenWidth = MediaQuery.of(ctx).size.width;
+        final bool isMobile = screenWidth < 768;
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              width: isMobile ? screenWidth * 0.88 : 460,
+              height: MediaQuery.of(ctx).size.height,
+              child: CartDrawer(addedProductName: addedProductName),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(-1.0, 0.0), // Slides out from the left!
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
+          child: child,
+        );
+      },
+    );
+  }
+
+  @override
+  State<CartDrawer> createState() => _CartDrawerState();
+}
+
+class _CartDrawerState extends State<CartDrawer> {
+  @override
+  Widget build(BuildContext context) {
+    final controller = CartController.instance;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 768;
+
+    return Drawer(
+      width: isMobile ? screenWidth * 0.88 : 460,
+      backgroundColor: AppColors.white,
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          if (controller.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryPink),
+            );
+          }
+
+          final items = controller.items;
+
+          return Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryPink,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.shopping_bag_outlined,
+                        color: AppColors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Shopping Cart',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.black87,
+                            ),
+                          ),
+                          Text(
+                            '${items.length} items',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 14,
+                              color: AppColors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: AppColors.grey),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              if (widget.addedProductName != null &&
+                  widget.addedProductName!.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.muted,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.signal,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${widget.addedProductName} added to cart!',
+                          style: GoogleFonts.instrumentSans(
+                            color: AppColors.foreground,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Cart Items List
+              Expanded(
+                child: items.isEmpty
+                    ? _buildEmptyState(context)
+                    : RawScrollbar(
+                        thumbColor: AppColors.primaryPink.withOpacity(0.6),
+                        thickness: 6,
+                        radius: const Radius.circular(10),
+                        thumbVisibility: true,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.all(24),
+                          itemCount: items.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            return _buildCartItem(items[index]);
+                          },
+                        ),
+                      ),
+              ),
+
+              if (items.isNotEmpty) ...[
+                const Divider(height: 1),
+                // Checkout Summary
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      _buildSummaryRow(
+                        'Subtotal',
+                        '\u20b9${controller.subtotal.ceil()}',
+                      ),
+                      const SizedBox(height: 12),
+                      if (controller.savings > 0)
+                        _buildSummaryRow(
+                          'You saved',
+                          '-\u20b9${controller.savings.ceil()}',
+                          valueColor: AppColors.signal,
+                        ),
+                      const SizedBox(height: 12),
+                      _buildSummaryRow(
+                        'Shipping',
+                        'FREE',
+                        valueColor: AppColors.signal,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSummaryRow(
+                        'Tax',
+                        '\u20b9${controller.tax.ceil()}',
+                        valueColor: AppColors.grey[400]!,
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Divider(height: 1),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.black87,
+                            ),
+                          ),
+                          Text(
+                            '\u20b9${controller.totalAmount.ceil()}',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.foreground,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            for (var item in items) {
+                              final p = item['product'];
+                              if (p == null) continue;
+                              final qty = item['quantity'] ?? 1;
+                              final varObj = item['variation'];
+                              int moq = p['moq'] ?? 1;
+                              if (varObj != null &&
+                                  varObj['moq'] != null &&
+                                  (varObj['moq'] as num).toInt() > 0) {
+                                moq = (varObj['moq'] as num).toInt();
+                              }
+                              if (qty < moq) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${p['name']} requires a minimum order quantity of $moq',
+                                      ),
+                                      backgroundColor: AppColors.errorRed,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CheckoutPage(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryPink,
+                            foregroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: const StadiumBorder(),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Proceed to Checkout',
+                                style: GoogleFonts.instrumentSans(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_rounded, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCartItem(dynamic item) {
+    final product = item['product'];
+    if (product == null) return const SizedBox();
+
+    final String name = product['name'] ?? 'Product';
+    double price =
+        (product['discountPrice'] != null && product['discountPrice'] > 0
+                ? product['discountPrice']
+                : (product['price'] ?? 0))
+            .toDouble();
+    final double oldPrice = (product['price'] ?? 0).toDouble();
+    final String imageUrl =
+        product['image'] ?? 'https://via.placeholder.com/150';
+    final int quantity = item['quantity'] ?? 1;
+
+    final variation = item['variation'];
+    final String? variationId =
+        item['variationId'] ??
+        (variation != null
+            ? (variation['_id'] ?? variation['id'])?.toString()
+            : null);
+
+    int moq = product['moq'] ?? 1;
+    if (variation != null &&
+        variation['moq'] != null &&
+        (variation['moq'] as num).toInt() > 0) {
+      moq = (variation['moq'] as num).toInt();
+    }
+    final double moqDiscount = (product['moqDiscount'] ?? 0).toDouble();
+
+    if (quantity >= moq && moqDiscount > 0) {
+      price = price - (price * (moqDiscount / 100));
+    }
+    price = price.roundToDouble();
+
+    final int discount = oldPrice > 0 && oldPrice > price
+        ? (((oldPrice - price) / oldPrice) * 100).toInt()
+        : 0;
+
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 768;
+    final double paddingVal = isMobile ? 10.0 : 16.0;
+    final double imgSize = isMobile ? 65.0 : 80.0;
+    final double titleFontSize = isMobile ? 13.0 : 15.0;
+    final double priceFontSize = isMobile ? 15.0 : 18.0;
+    final double oldPriceFontSize = isMobile ? 12.0 : 14.0;
+
+    String? variationText;
+    if (variation != null) {
+      final List<String> parts = [];
+      final modelNameVal = variation['modelName'] ?? variation['size'];
+      if (modelNameVal != null && modelNameVal.toString().trim().isNotEmpty) {
+        parts.add('Model: $modelNameVal');
+      }
+      if (variation['color'] != null &&
+          variation['color'].toString().trim().isNotEmpty) {
+        parts.add('Color: ${variation['color']}');
+      }
+      if (variation['material'] != null &&
+          variation['material'].toString().trim().isNotEmpty) {
+        parts.add('Material: ${variation['material']}');
+      }
+      if (parts.isNotEmpty) {
+        variationText = parts.join(' | ');
+      }
+    }
+
+    return Container(
+      padding: EdgeInsets.all(paddingVal),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.grey[200]!),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Image with Discount Badge
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  imageUrl,
+                  width: imgSize,
+                  height: imgSize,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              if (discount > 0)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.foreground,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$discount%',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(width: isMobile ? 10 : 16),
+          // Product Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.black87,
+                  ),
+                ),
+                if (variationText != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    variationText,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 11,
+                      color: AppColors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 2,
+                  children: [
+                    Text(
+                      '\u20b9${price.ceil()}',
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: priceFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.black87,
+                      ),
+                    ),
+                    if (oldPrice > price)
+                      Text(
+                        '\u20b9${oldPrice.ceil()}',
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: oldPriceFontSize,
+                          color: AppColors.grey[400],
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                  ],
+                ),
+                if (quantity >= moq && moqDiscount > 0) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.muted,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      'Includes ${moqDiscount.toInt()}% MOQ Discount',
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.signal,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                // Quantity and Delete row
+                // Row(
+                //   children: [
+                //     Container(
+                //       decoration: BoxDecoration(
+                //         border: Border.all(color: AppColors.grey[300]!),
+                //         borderRadius: BorderRadius.circular(8),
+                //       ),
+                //       child: Row(
+                //         children: [
+                //           _quantityButton(Icons.remove, () {
+                //             if (quantity > moq) {
+                //               CartController.instance.addToCart(
+                //                 product['_id'],
+                //                 quantity: -1,
+                //                 variationId: variationId,
+                //               );
+                //             } else {
+                //               ScaffoldMessenger.of(context).showSnackBar(
+                //                 SnackBar(
+                //                   content: Text('Minimum order quantity is $moq'),
+                //                   duration: const Duration(seconds: 1),
+                //                 ),
+                //               );
+                //             }
+                //           }),
+                //           Padding(
+                //             padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
+                //             child: Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold)),
+                //           ),
+                //           _quantityButton(Icons.add, () {
+                //             CartController.instance.addToCart(
+                //               product['_id'],
+                //               quantity: 1,
+                //               variationId: variationId,
+                //             );
+                //           }),
+                //         ],
+                //       ),
+                //     ),
+                //     const Spacer(),
+                //     IconButton(
+                //       icon: const Icon(Icons.delete_outline, color: AppColors.foreground, size: 20),
+                //       onPressed: () {
+                //         CartController.instance.removeFromCart(product['_id'], variationId: variationId);
+                //       },
+                //     ),
+                //   ],
+                // ),
+                Builder(
+                  builder: (context) {
+                    final String productId =
+                        (product['_id'] ?? product['id'])?.toString() ?? '';
+                    final bool isUpdating = CartController.instance
+                        .isItemUpdating(productId, variationId: variationId);
+                    final bool isRemoving = CartController.instance
+                        .isItemRemoving(productId, variationId: variationId);
+
+                    return Row(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.grey[300]!),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              _quantityButton(
+                                Icons.remove,
+                                (isUpdating || isRemoving)
+                                    ? null
+                                    : () {
+                                        if (quantity > moq) {
+                                          CartController.instance.addToCart(
+                                            productId,
+                                            quantity: -1,
+                                            variationId: variationId,
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Minimum order quantity is $moq',
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 1,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isMobile ? 8 : 12,
+                                ),
+                                child: isUpdating
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                AppColors.primaryPink,
+                                              ),
+                                        ),
+                                      )
+                                    : Text(
+                                        '$quantity',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primaryPink,
+                                        ),
+                                      ),
+                              ),
+                              _quantityButton(
+                                Icons.add,
+                                (isUpdating || isRemoving)
+                                    ? null
+                                    : () {
+                                        CartController.instance.addToCart(
+                                          productId,
+                                          quantity: 1,
+                                          variationId: variationId,
+                                        );
+                                      },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        isRemoving
+                            ? const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.foreground,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.foreground,
+                                  size: 20,
+                                ),
+                                onPressed: (isUpdating || isRemoving)
+                                    ? null
+                                    : () {
+                                        CartController.instance.removeFromCart(
+                                          productId,
+                                          variationId: variationId,
+                                        );
+                                      },
+                              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget _quantityButton(IconData icon, VoidCallback onPressed) {
+  //   return InkWell(
+  //     onTap: onPressed,
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(4.0),
+  //       child: Icon(icon, size: 16, color: AppColors.grey[600]),
+  //     ),
+  //   );
+  // }
+  Widget _quantityButton(IconData icon, VoidCallback? onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Icon(
+          icon,
+          size: 16,
+          color: onPressed == null ? AppColors.grey[300] : AppColors.grey[600],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value, {Color? valueColor}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 16,
+            color: label == 'You saved' || label == 'Shipping'
+                ? AppColors.signal
+                : AppColors.grey[700],
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.instrumentSans(
+            fontSize: 16,
+            fontWeight: label == 'Total' ? FontWeight.bold : FontWeight.w500,
+            color: valueColor ?? AppColors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(40),
+          decoration: BoxDecoration(
+            color: AppColors.grey[100],
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.shopping_bag_outlined,
+            size: 80,
+            color: AppColors.grey[400],
+          ),
+        ),
+        const SizedBox(height: 32),
+        Text(
+          'Your cart is empty',
+          style: GoogleFonts.instrumentSans(
+            fontSize: 24,
+            fontWeight: FontWeight.w400, letterSpacing: -0.5,
+            color: AppColors.black87,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Add some products to get started',
+          style: GoogleFonts.instrumentSans(fontSize: 16, color: AppColors.grey[500]),
+        ),
+        const SizedBox(height: 40),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryPink,
+            foregroundColor: AppColors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            shape: const StadiumBorder(),
+            elevation: 0,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Continue Shopping',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.arrow_forward, size: 18),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

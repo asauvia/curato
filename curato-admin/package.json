@@ -1,0 +1,8 @@
+{
+  "name": "curato-admin",
+  "version": "1.0.0",
+  "description": "Curato Admin Panel",
+  "scripts": {
+    "build": "sh build.sh"
+  }
+}

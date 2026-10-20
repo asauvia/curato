@@ -1,0 +1,126 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  /* Light theme only, matching the Web site (no dark mode). */
+  color-scheme: light;
+
+  /* Shared tokens from the Web theme: warm paper, ink, hairlines. */
+  --bg: #fafaf9;            /* page background */
+  --text: #0c0806;          /* primary text */
+  --text-h: #0c0806;        /* headings, primary text */
+  --text-p: #5c534d;        /* muted-foreground: secondary text */
+  --muted: #f1f0ed;         /* raised panels */
+  --border: #dcdbd6;        /* hairlines (use instead of card shadows) */
+  --code-bg: #f1f0ed;
+  --card-bg: #fafaf9;       /* cards: 1px border, no shadow */
+  --accent: #0c0806;        /* primary button fill */
+  --accent-fg: #fafaf9;     /* text on primary fill */
+  --accent-gold: #0c0806;   /* legacy name, now the foreground ink */
+  --accent-secondary: #b42318; /* sale / badge red */
+  --accent-bg: #f1f0ed;
+  --accent-border: #dcdbd6;
+  --social-bg: #f1f0ed;
+  --signal: #2c965d;        /* live status and success accents only */
+  --danger: #b42318;        /* errors */
+  --warning: #b7791f;       /* warnings */
+  --ring: rgba(12, 8, 6, 0.12); /* focus ring */
+  --shadow: none;
+
+  --sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --heading: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  font: 16px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 15px;
+  }
+}
+
+#root {
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--bg);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--heading);
+  font-weight: 400;
+  color: var(--text-h);
+}
+
+/* Buttons and form controls do not inherit the page font by default. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+/* Native radio and checkbox controls use the ink token, not the browser blue. */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.4px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
