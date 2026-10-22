@@ -99,10 +99,10 @@
   --elevate-2: rgba(0,0,0, .06);
 
   /* Palette tokens. Values are HSL triplets so hsl(var(--x)) works in @theme. */
-  --background: 37.5 33.3% 95.3%;          /* #fafaf9 page */
-  --foreground: 34.3 18.9% 7.3%;          /* #0c0806 primary text, primary fill */
+  --background: 37.5 33.3% 95.3%;          /* #f7f4ef page */
+  --foreground: 34.3 18.9% 7.3%;          /* #16130f primary text, primary fill */
 
-  --border: 38.2 22.9% 81.2%;              /* #dcdbd6 hairlines */
+  --border: 38.2 22.9% 81.2%;              /* #dad2c4 hairlines */
   --input: 38.2 22.9% 81.2%;
   --ring: 34.3 18.9% 7.3%;
 
@@ -117,7 +117,7 @@
   --sidebar-primary: 34.3 18.9% 7.3%;
   --sidebar-primary-foreground: 37.5 33.3% 95.3%;
   --sidebar-accent: 36.9 25.5% 90.0%;
-  --sidebar-accent-foreground: 20 33.3% 3.5%;
+  --sidebar-accent-foreground: 34.3 18.9% 7.3%;
   --sidebar-ring: 34.3 18.9% 7.3%;
 
   --popover: 37.5 33.3% 95.3%;
@@ -132,20 +132,20 @@
   --secondary: 37.5 33.3% 95.3%;
   --secondary-foreground: 34.3 18.9% 7.3%;
 
-  --muted: 36.9 25.5% 90.0%;              /* #f1f0ed raised panels */
-  --muted-foreground: 33.0 10.3% 38.0%;    /* #5c534d secondary text */
+  --muted: 36.9 25.5% 90.0%;              /* #ece7df raised panels */
+  --muted-foreground: 33.0 10.3% 38.0%;    /* #6b6257 secondary text */
 
   --accent: 36.9 25.5% 90.0%;
   --accent-foreground: 34.3 18.9% 7.3%;
 
-  /* Semantic error colour kept */
+  /* Semantic error colour: oxide, muted to sit on paper */
   --destructive: 6.7 55.8% 40.8%;
   --destructive-foreground: 210 40% 98%;
 
-  /* Signal green: live/status and success accents only */
-  --signal: 125.5 18.2% 35.5%;            /* #2c965d */
+  /* Signal moss: live/status and success accents only */
+  --signal: 125.5 18.2% 35.5%;            /* #4a6b4d */
 
-  --brass: 39.2 45.6% 44.7%;
+  --brass: 39.2 45.6% 44.7%;            /* #a6823e */
 
   --chart-1: 34.3 18.9% 7.3%;
   --chart-2: 125.5 18.2% 35.5%;
@@ -176,7 +176,7 @@
   * {
     @apply border-border;
   }
-  /* Display headings: Instrument Sans, regular weight, tight tracking */
+  /* Display headings: Fraunces via font-serif (--app-font-serif), tight tracking */
   h1, h2 {
     @apply font-serif;
     letter-spacing: -0.02em;
