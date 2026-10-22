@@ -3,8 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:curato_vendor/core/constants/app_colors.dart';
 
 class AppTheme {
-  // Light theme only. Instrument Sans for body and display, tight tracking on
-  // large headings, full-pill buttons, hairline borders instead of shadows.
+  // Light theme only. Fraunces for display, Instrument Sans for body, tight
+  // tracking on large headings, full-pill buttons, hairline borders instead of
+  // shadows.
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
