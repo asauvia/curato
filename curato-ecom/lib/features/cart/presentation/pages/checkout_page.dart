@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curato_user/core/constants/app_colors.dart';
 import 'package:curato_user/core/widgets/curato_layout.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 import 'package:curato_user/features/cart/application/cart_controller.dart';
 import 'package:curato_user/features/auth/application/address_controller.dart';
 import 'package:curato_user/core/services/session_service.dart';
@@ -562,7 +563,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             height: 12,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.errorRed),
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.oxide),
                             ),
                           ),
                           SizedBox(width: 4),
@@ -570,7 +571,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             'Removing...',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.errorRed,
+                              color: AppColors.oxide,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -579,13 +580,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.delete_outline, size: 16, color: AppColors.errorRed),
+                          const Icon(Icons.delete_outline, size: 16, color: AppColors.oxide),
                           const SizedBox(width: 4),
                           Text(
                             'Remove',
                             style: GoogleFonts.instrumentSans(
                               fontSize: 12,
-                              color: AppColors.errorRed,
+                              color: AppColors.oxide,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -626,15 +627,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handlePlaceOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.foreground,
-                foregroundColor: AppColors.white,
+              style: AppButtonStyles.brassOutline(
                 padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: const StadiumBorder(),
-                elevation: 0,
               ),
-              child: _isLoading 
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
+              child: _isLoading
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.brass, strokeWidth: 2))
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

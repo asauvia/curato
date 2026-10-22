@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curato_user/core/constants/app_colors.dart';
 import 'package:curato_user/core/widgets/curato_layout.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 import 'package:curato_user/features/cart/application/cart_controller.dart';
 import 'package:curato_user/features/cart/presentation/pages/checkout_page.dart';
 
@@ -185,7 +186,7 @@ class _CartPageState extends State<CartPage> {
                                           content: Text(
                                             '${p['name']} requires a minimum order quantity of $moq',
                                           ),
-                                          backgroundColor: AppColors.errorRed,
+                                          backgroundColor: AppColors.oxide,
                                         ),
                                       );
                                     }
@@ -200,12 +201,8 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                 );
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.foreground,
-                                foregroundColor: AppColors.white,
+                              style: AppButtonStyles.brassOutline(
                                 padding: const EdgeInsets.symmetric(vertical: 18),
-                                shape: const StadiumBorder(),
-                                elevation: 0,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
