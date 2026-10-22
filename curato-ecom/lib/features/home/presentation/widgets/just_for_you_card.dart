@@ -1,6 +1,7 @@
 import 'package:curato_user/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 
 class JustForYouCard extends StatefulWidget {
   final String imageUrl;
@@ -38,9 +39,9 @@ class _JustForYouCardState extends State<JustForYouCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.grey200, width: 1),
+          border: Border.all(color: AppColors.border, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +63,7 @@ class _JustForYouCardState extends State<JustForYouCard> {
                       left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                        decoration: BoxDecoration(color: AppColors.primaryPink, borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(color: AppColors.oxide, borderRadius: BorderRadius.circular(4)),
                         child: Text(
                           '--${widget.discount}%',
                           style: GoogleFonts.instrumentSans(color: AppColors.white, fontSize: 10, fontWeight: FontWeight.bold),
@@ -128,8 +129,7 @@ class _JustForYouCardState extends State<JustForYouCard> {
                     children: [
                       Text(
                         '₹${widget.price.ceil()}',
-                        // style: GoogleFonts.instrumentSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.black87),
-                        style: GoogleFonts.instrumentSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryPink),
+                        style: GoogleFonts.instrumentSans(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.brass),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -153,13 +153,7 @@ class _JustForYouCardState extends State<JustForYouCard> {
                         'Add to Cart',
                         style: GoogleFonts.instrumentSans(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryPink,
-                        foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: const StadiumBorder(),
-                        elevation: 0,
-                      ),
+                      style: AppButtonStyles.brassOutline(padding: const EdgeInsets.symmetric(vertical: 10)),
                     ),
                   ),
                 ],

@@ -7,6 +7,7 @@ import 'package:curato_user/core/services/session_service.dart';
 import 'package:curato_user/features/cart/application/cart_controller.dart';
 import 'package:curato_user/features/home/presentation/widgets/cart_drawer.dart';
 import 'package:curato_user/core/utils/url_helper.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 
 class ProductCard extends StatefulWidget {
   final ProductModel product;
@@ -50,7 +51,7 @@ class _ProductCardState extends State<ProductCard> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
-                color: AppColors.white,
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _isHovered ? AppColors.primaryBlue : AppColors.borderLight,
@@ -66,9 +67,12 @@ class _ProductCardState extends State<ProductCard> {
                       children: [
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                          child: Image.network(
-                            widget.product.imageUrl,
-                            fit: BoxFit.cover,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Image.network(
+                              widget.product.imageUrl,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
                       if (widget.product.discount > 0)
@@ -78,7 +82,7 @@ class _ProductCardState extends State<ProductCard> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.accentOrange,
+                              color: AppColors.oxide,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -148,8 +152,7 @@ class _ProductCardState extends State<ProductCard> {
                               style: GoogleFonts.instrumentSans(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
-                                // color: AppColors.primaryIndigo,
-                                color: AppColors.primaryPink,
+                                color: AppColors.brass,
                               ),
                             ),
                             if (widget.product.oldPrice != null) ...[
@@ -178,7 +181,7 @@ class _ProductCardState extends State<ProductCard> {
                                 Icon(
                                   Icons.inventory_2_outlined,
                                   size: 13,
-                                  color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.errorRed,
+                                  color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.oxide,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -186,7 +189,7 @@ class _ProductCardState extends State<ProductCard> {
                                   style: GoogleFonts.instrumentSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.errorRed,
+                                    color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.oxide,
                                   ),
                                 ),
                               ],
@@ -233,19 +236,12 @@ class _ProductCardState extends State<ProductCard> {
                                 }
                               }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryBlue,
-                              foregroundColor: AppColors.white,
-                              shape: const StadiumBorder(),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              elevation: 0,
-                            ),
+                            style: AppButtonStyles.brassOutline(),
                             child: Text(
                               'Add to Cart',
                               style: GoogleFonts.instrumentSans(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: AppColors.white,
                               ),
                             ),
                           ),

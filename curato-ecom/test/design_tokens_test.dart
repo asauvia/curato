@@ -5,6 +5,7 @@ import 'package:curato_user/core/constants/app_colors.dart';
 import 'package:curato_user/core/theme/app_theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
   test('design tokens use the modern-luxury-showroom palette', () {
@@ -26,6 +27,9 @@ void main() {
     expect(textTheme.displayLarge?.fontFamily, contains('Fraunces'));
     expect(textTheme.displayMedium?.fontFamily, contains('Fraunces'));
     expect(textTheme.titleLarge?.fontFamily, contains('Fraunces'));
-    expect(textTheme.bodyMedium?.fontFamily, contains('Instrument Sans'));
+    expect(
+      textTheme.bodyMedium?.fontFamily?.replaceAll(' ', '').toLowerCase(),
+      contains('instrumentsans'),
+    );
   });
 }

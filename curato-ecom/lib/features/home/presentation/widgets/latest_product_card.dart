@@ -7,6 +7,7 @@ import 'package:curato_user/core/services/session_service.dart';
 import 'package:curato_user/features/cart/application/cart_controller.dart';
 import 'package:curato_user/features/home/presentation/widgets/cart_drawer.dart';
 import 'package:curato_user/core/utils/url_helper.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 
 class LatestProductCard extends StatefulWidget {
   final ProductModel product;
@@ -49,9 +50,9 @@ class _LatestProductCardState extends State<LatestProductCard> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
-                color: AppColors.white,
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _isHovered ? AppColors.foreground : AppColors.grey200),
+                border: Border.all(color: _isHovered ? AppColors.foreground : AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,11 +64,14 @@ class _LatestProductCardState extends State<LatestProductCard> {
                       children: [
                         ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                          child: Image.network(
-                            widget.product.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, _, __) => const Center(
-                              child: Icon(Icons.image_not_supported_outlined, size: 40, color: AppColors.grey),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Image.network(
+                              widget.product.imageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, _, __) => const Center(
+                                child: Icon(Icons.image_not_supported_outlined, size: 40, color: AppColors.grey),
+                              ),
                             ),
                           ),
                         ),
@@ -150,7 +154,7 @@ class _LatestProductCardState extends State<LatestProductCard> {
                                 style: GoogleFonts.instrumentSans(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.foreground,
+                                  color: AppColors.brass,
                                 ),
                               ),
                               if (widget.product.oldPrice != null) ...[
@@ -179,7 +183,7 @@ class _LatestProductCardState extends State<LatestProductCard> {
                                   Icon(
                                     Icons.inventory_2_outlined,
                                     size: 12,
-                                    color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.errorRed,
+                                    color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.oxide,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -187,7 +191,7 @@ class _LatestProductCardState extends State<LatestProductCard> {
                                     style: GoogleFonts.instrumentSans(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
-                                      color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.errorRed,
+                                      color: (widget.product.available ?? 0) > 0 ? AppColors.signal : AppColors.oxide,
                                     ),
                                   ),
                                 ],
@@ -239,13 +243,7 @@ class _LatestProductCardState extends State<LatestProductCard> {
                               icon: const Icon(Icons.shopping_cart_outlined, size: 14),
                               label: Text('Add to Cart',
                                   style: GoogleFonts.instrumentSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.foreground,
-                                foregroundColor: AppColors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                shape: const StadiumBorder(),
-                                elevation: 0,
-                              ),
+                              style: AppButtonStyles.brassOutline(padding: const EdgeInsets.symmetric(vertical: 8)),
                             ),
                           ),
                         ],

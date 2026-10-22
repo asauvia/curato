@@ -5,6 +5,7 @@ import 'package:curato_admin/core/constants/app_colors.dart';
 import 'package:curato_admin/core/theme/app_theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
   test('design tokens use the modern-luxury-showroom palette', () {

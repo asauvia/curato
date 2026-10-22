@@ -7,6 +7,7 @@ import 'package:curato_user/core/controllers/wishlist_controller.dart';
 import 'package:curato_user/core/services/session_service.dart';
 import 'package:curato_user/features/home/presentation/widgets/cart_drawer.dart';
 import 'package:curato_user/core/utils/url_helper.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 
 class DailyDealCard extends StatelessWidget {
   final ProductModel product;
@@ -72,7 +73,7 @@ class DailyDealCard extends StatelessWidget {
                 Text(
                   '₹${product.price.ceil()}',
                   style: GoogleFonts.instrumentSans(
-                    color: AppColors.primaryPink,
+                    color: AppColors.brass,
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                   ),
@@ -97,7 +98,7 @@ class DailyDealCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: AppColors.muted,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryPink),
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.oxide),
                 minHeight: 4,
               ),
             ),
@@ -118,15 +119,12 @@ class DailyDealCard extends StatelessWidget {
                     CartDrawer.showSlider(context, addedProductName: product.name);
                   }
                 },
-                icon: const Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.white),
+                icon: const Icon(Icons.shopping_bag_outlined, size: 14),
                 label: const Text('Add to Cart'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.foreground,
-                  foregroundColor: AppColors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: const StadiumBorder(),
-                  textStyle: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold, fontSize: 12),
+                style: AppButtonStyles.brassOutline().copyWith(
+                  textStyle: WidgetStatePropertyAll(
+                    GoogleFonts.instrumentSans(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
                 ),
               ),
             ),
@@ -146,9 +144,9 @@ class DailyDealCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.muted, width: 1.5),
+              border: Border.all(color: AppColors.border, width: 1.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +194,7 @@ class DailyDealCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.foreground,
+                color: AppColors.oxide,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

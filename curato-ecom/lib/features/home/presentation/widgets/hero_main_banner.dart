@@ -96,10 +96,10 @@ class HeroMainBanner extends StatelessWidget {
               title,
               maxLines: isMobile ? 3 : 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.instrumentSans(
+              style: GoogleFonts.fraunces(
                 color: AppColors.white,
                 fontSize: isMobile ? 26 : 48,
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w500,
                 height: 1.1,
                 letterSpacing: isMobile ? -0.6 : -1.5,
               ),

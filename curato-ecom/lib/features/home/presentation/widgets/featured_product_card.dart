@@ -3,6 +3,7 @@ import 'package:curato_user/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curato_user/core/controllers/wishlist_controller.dart';
 import 'package:curato_user/core/utils/url_helper.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 
 class FeaturedProductCard extends StatefulWidget {
   final String name;
@@ -75,7 +76,7 @@ class _FeaturedProductCardState extends State<FeaturedProductCard> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: _isHovered ? AppColors.primaryBlue.withOpacity(0.5) : AppColors.borderLight,
@@ -93,12 +94,15 @@ class _FeaturedProductCardState extends State<FeaturedProductCard> {
                       child: SizedBox(
                         height: 200,
                         width: double.infinity,
-                        child: Image.network(
-                          widget.imageUrl,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: AppColors.grey[100],
-                            child: const Icon(Icons.image_outlined, color: AppColors.grey, size: 40),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Image.network(
+                            widget.imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: AppColors.grey[100],
+                              child: const Icon(Icons.image_outlined, color: AppColors.grey, size: 40),
+                            ),
                           ),
                         ),
                       ),
@@ -140,7 +144,7 @@ class _FeaturedProductCardState extends State<FeaturedProductCard> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.foreground,
+                            color: AppColors.oxide,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -257,7 +261,7 @@ class _FeaturedProductCardState extends State<FeaturedProductCard> {
                               style: GoogleFonts.instrumentSans(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w900,
-                                color: AppColors.black,
+                                color: AppColors.brass,
                               ),
                             ),
                             if (widget.oldPrice != null) ...[
@@ -281,13 +285,7 @@ class _FeaturedProductCardState extends State<FeaturedProductCard> {
                             onPressed: widget.onAddToCart,
                             icon: const Icon(Icons.shopping_cart_outlined, size: 16),
                             label: Text('Add to Cart', style: GoogleFonts.instrumentSans(fontWeight: FontWeight.bold, fontSize: 13)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryPink,
-                              foregroundColor: AppColors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: const StadiumBorder(),
-                              elevation: 0,
-                            ),
+                            style: AppButtonStyles.brassOutline(padding: const EdgeInsets.symmetric(vertical: 10)),
                           ),
                         ),
                       ],
