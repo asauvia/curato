@@ -21,7 +21,7 @@ class AppTheme {
         onPrimary: AppColors.background,
         secondary: AppColors.foreground,
         onSecondary: AppColors.background,
-        error: const Color(0xFFDC2626),
+        error: AppColors.oxide,
         onError: AppColors.background,
         surface: AppColors.background,
         onSurface: AppColors.foreground,
@@ -30,7 +30,23 @@ class AppTheme {
         outlineVariant: AppColors.border,
         surfaceTint: Colors.transparent,
       ),
-      textTheme: GoogleFonts.instrumentSansTextTheme(),
+      textTheme: GoogleFonts.instrumentSansTextTheme().copyWith(
+        displayLarge: GoogleFonts.fraunces(
+          color: AppColors.foreground,
+          fontWeight: FontWeight.w400,
+          letterSpacing: -1.5,
+        ),
+        displayMedium: GoogleFonts.fraunces(
+          color: AppColors.foreground,
+          fontWeight: FontWeight.w400,
+          letterSpacing: -1.0,
+        ),
+        displaySmall: GoogleFonts.fraunces(
+          color: AppColors.foreground,
+          fontWeight: FontWeight.w400,
+          letterSpacing: -0.5,
+        ),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.foreground,
