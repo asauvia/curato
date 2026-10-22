@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Web palette (warm paper, light theme only). Tokens match Asauvia's globals.css.
-  static const Color background = Color(0xFFFAFAF9);        // Page background (warm paper)
-  static const Color foreground = Color(0xFF0C0806);        // Primary text, primary button fill
-  static const Color muted = Color(0xFFF1F0ED);             // Raised panels
-  static const Color mutedForeground = Color(0xFF5C534D);   // Secondary text
-  static const Color border = Color(0xFFDCDBD6);            // Hairlines (used instead of card shadows)
-  static const Color signal = Color(0xFF2C965D);            // Live/status indicator and success accents only
+  static const Color background = Color(0xFFF7F4EF);        // Page background (warm paper)
+  static const Color foreground = Color(0xFF16130F);        // Primary text, primary button fill
+  static const Color muted = Color(0xFFECE7DF);             // Raised panels
+  static const Color mutedForeground = Color(0xFF6B6257);   // Secondary text
+  static const Color border = Color(0xFFDAD2C4);            // Hairlines (used instead of card shadows)
+  static const Color signal = Color(0xFF4A6B4D);            // Live/status indicator and success accents only
+  static const Color brass = Color(0xFFA6823E);             // Brass accent
+  static const Color oxide = Color(0xFFA23B2E);             // Oxide accent
 
   // Legacy names, kept so existing widgets compile. They now resolve to the palette above.
   static const Color creamBg = background;
@@ -100,29 +102,29 @@ class AppColors {
 
   // Warm neutral swatch (replaces Material's cool grey)
   static const MaterialColor grey = MaterialColor(0xFF5C534D, <int, Color>{
-    50: Color(0xFFFAFAF9),
-    100: Color(0xFFF1F0ED),
+    50: Color(0xFFF7F4EF),
+    100: Color(0xFFECE7DF),
     200: Color(0xFFE8E7E3),
-    300: Color(0xFFDCDBD6),
+    300: Color(0xFFDAD2C4),
     400: Color(0xFFB3AEA8),
     500: Color(0xFF8C857E),
-    600: Color(0xFF5C534D),
+    600: Color(0xFF6B6257),
     700: Color(0xFF443D38),
     800: Color(0xFF2A2420),
-    900: Color(0xFF0C0806),
+    900: Color(0xFF16130F),
   });
 
   // Shades
-  static const Color grey50 = Color(0xFFFAFAF9);
-  static const Color grey100 = Color(0xFFF1F0ED);
+  static const Color grey50 = Color(0xFFF7F4EF);
+  static const Color grey100 = Color(0xFFECE7DF);
   static const Color grey200 = Color(0xFFE8E7E3);
-  static const Color grey300 = Color(0xFFDCDBD6);
+  static const Color grey300 = Color(0xFFDAD2C4);
   static const Color grey400 = Color(0xFFB3AEA8);
   static const Color grey500 = Color(0xFF8C857E);
-  static const Color grey600 = Color(0xFF5C534D);
+  static const Color grey600 = Color(0xFF6B6257);
   static const Color grey700 = Color(0xFF443D38);
   static const Color grey800 = Color(0xFF2A2420);
-  static const Color grey900 = Color(0xFF0C0806);
+  static const Color grey900 = Color(0xFF16130F);
 
   static const Color red50 = Color(0xFFFFEBEE);
   static const Color red100 = Color(0xFFFFCDD2);

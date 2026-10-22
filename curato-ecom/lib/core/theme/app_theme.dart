@@ -22,17 +22,17 @@ class AppTheme {
     textTheme: GoogleFonts.instrumentSansTextTheme()
         .apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary)
         .copyWith(
-          displayLarge: GoogleFonts.instrumentSans(
+          displayLarge: GoogleFonts.fraunces(
             fontWeight: FontWeight.w400,
             letterSpacing: -1.5,
             color: AppColors.textPrimary,
           ),
-          displayMedium: GoogleFonts.instrumentSans(
+          displayMedium: GoogleFonts.fraunces(
             fontWeight: FontWeight.w400,
             letterSpacing: -1.0,
             color: AppColors.textPrimary,
           ),
-          titleLarge: GoogleFonts.instrumentSans(
+          titleLarge: GoogleFonts.fraunces(
             fontWeight: FontWeight.w400,
             letterSpacing: -0.4,
             color: AppColors.textPrimary,
