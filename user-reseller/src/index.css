@@ -7,29 +7,30 @@
   color-scheme: light;
 
   /* Shared tokens from the Web theme: warm paper, ink, hairlines. */
-  --bg: #fafaf9;            /* page background */
-  --text: #0c0806;          /* primary text */
-  --text-h: #0c0806;        /* headings, primary text */
-  --text-p: #5c534d;        /* muted-foreground: secondary text */
-  --muted: #f1f0ed;         /* raised panels */
-  --border: #dcdbd6;        /* hairlines (use instead of card shadows) */
-  --code-bg: #f1f0ed;
-  --card-bg: #fafaf9;       /* cards: 1px border, no shadow */
-  --accent: #0c0806;        /* primary button fill */
-  --accent-fg: #fafaf9;     /* text on primary fill */
-  --accent-gold: #0c0806;   /* legacy name, now the foreground ink */
-  --accent-secondary: #b42318; /* sale / badge red */
-  --accent-bg: #f1f0ed;
-  --accent-border: #dcdbd6;
-  --social-bg: #f1f0ed;
-  --signal: #2c965d;        /* live status and success accents only */
-  --danger: #b42318;        /* errors */
+  --bg: #f7f4ef;            /* page background */
+  --text: #16130f;          /* primary text */
+  --text-h: #16130f;        /* headings, primary text */
+  --text-p: #6b6257;        /* muted-foreground: secondary text */
+  --muted: #ece7df;         /* raised panels */
+  --border: #dad2c4;        /* hairlines (use instead of card shadows) */
+  --code-bg: #ece7df;
+  --card-bg: #f7f4ef;       /* cards: 1px border, no shadow */
+  --accent: #16130f;        /* primary button fill */
+  --accent-fg: #f7f4ef;     /* text on primary fill */
+  --accent-gold: #16130f;   /* legacy name, now the foreground ink */
+  --accent-secondary: #a23b2e; /* sale / badge red */
+  --accent-bg: #ece7df;
+  --accent-border: #dad2c4;
+  --brass: #a6823e;
+  --social-bg: #ece7df;
+  --signal: #4a6b4d;        /* live status and success accents only */
+  --danger: #a23b2e;        /* errors */
   --warning: #b7791f;       /* warnings */
-  --ring: rgba(12, 8, 6, 0.12); /* focus ring */
+  --ring: rgba(22, 19, 15, 0.12); /* focus ring */
   --shadow: none;
 
   --sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --heading: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --heading: 'Fraunces', Georgia, system-ui, serif;
   --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
 
   font: 16px/145% var(--sans);
