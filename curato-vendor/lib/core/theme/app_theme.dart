@@ -24,17 +24,17 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.background,
       textTheme: GoogleFonts.instrumentSansTextTheme().copyWith(
-        displayLarge: GoogleFonts.instrumentSans(
+        displayLarge: GoogleFonts.fraunces(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w400,
           letterSpacing: -1.5,
         ),
-        displayMedium: GoogleFonts.instrumentSans(
+        displayMedium: GoogleFonts.fraunces(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w400,
           letterSpacing: -1.0,
         ),
-        displaySmall: GoogleFonts.instrumentSans(
+        displaySmall: GoogleFonts.fraunces(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w400,
           letterSpacing: -0.5,
