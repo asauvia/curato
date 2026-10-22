@@ -27,7 +27,7 @@ HSL values are the equivalents of the hex values above, used by `curato-reseller
 - **UI/body — Instrument Sans** (unchanged). Keeps continuity with the current system and stays legible in data-dense admin/vendor screens.
 - **Data/mono — JetBrains Mono** (unchanged). SKUs, prices in tables, order IDs.
 
-**Type scale:** follow Elements-of-Typographic-Style-style ratios (not a flat arbitrary scale). Exact step values are finalized per-app, since Flutter (`TextTheme`) and web CSS (`clamp()`/rem) express scales differently. The ratio and the pairing rule (serif for display, sans for UI, mono for data) are fixed here.
+**Type scale:** follow Elements-of-Typographic-Style-style ratios (not a flat arbitrary scale). Exact step values to be finalized per-app, since Flutter (`TextTheme`) and web CSS (`clamp()`/rem) express scales differently. The ratio and the pairing rule (serif for display, sans for UI, mono for data) are fixed here.
 
 ## Spacing, layout, and motion
 
