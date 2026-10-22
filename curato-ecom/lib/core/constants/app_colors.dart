@@ -101,7 +101,7 @@ class AppColors {
   static const MaterialColor errorRed = Colors.red;
 
   // Warm neutral swatch (replaces Material's cool grey)
-  static const MaterialColor grey = MaterialColor(0xFF5C534D, <int, Color>{
+  static const MaterialColor grey = MaterialColor(0xFF6B6257, <int, Color>{
     50: Color(0xFFF7F4EF),
     100: Color(0xFFECE7DF),
     200: Color(0xFFE8E7E3),
