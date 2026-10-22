@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -24,6 +24,9 @@
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-primary-border: var(--primary-border);
+
+  --color-brass: hsl(var(--brass));
+  --color-brass-border: var(--brass-border);
 
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
@@ -96,60 +99,62 @@
   --elevate-2: rgba(0,0,0, .06);
 
   /* Palette tokens. Values are HSL triplets so hsl(var(--x)) works in @theme. */
-  --background: 60 9.1% 97.8%;          /* #fafaf9 page */
-  --foreground: 20 33.3% 3.5%;          /* #0c0806 primary text, primary fill */
+  --background: 37.5 33.3% 95.3%;          /* #fafaf9 page */
+  --foreground: 34.3 18.9% 7.3%;          /* #0c0806 primary text, primary fill */
 
-  --border: 50 7.9% 85.1%;              /* #dcdbd6 hairlines */
-  --input: 50 7.9% 85.1%;
-  --ring: 20 33.3% 3.5%;
+  --border: 38.2 22.9% 81.2%;              /* #dcdbd6 hairlines */
+  --input: 38.2 22.9% 81.2%;
+  --ring: 34.3 18.9% 7.3%;
 
-  --card: 60 9.1% 97.8%;                /* cards: paper + hairline border, no shadow */
-  --card-foreground: 20 33.3% 3.5%;
-  --card-border: 50 7.9% 85.1%;
+  --card: 37.5 33.3% 95.3%;                /* cards: paper + hairline border, no shadow */
+  --card-foreground: 34.3 18.9% 7.3%;
+  --card-border: 38.2 22.9% 81.2%;
 
   /* Sidebar is paper with a hairline, not a dark panel */
-  --sidebar: 60 9.1% 97.8%;
-  --sidebar-foreground: 20 33.3% 3.5%;
-  --sidebar-border: 50 7.9% 85.1%;
-  --sidebar-primary: 20 33.3% 3.5%;
-  --sidebar-primary-foreground: 60 9.1% 97.8%;
-  --sidebar-accent: 45 12.5% 93.7%;
+  --sidebar: 37.5 33.3% 95.3%;
+  --sidebar-foreground: 34.3 18.9% 7.3%;
+  --sidebar-border: 38.2 22.9% 81.2%;
+  --sidebar-primary: 34.3 18.9% 7.3%;
+  --sidebar-primary-foreground: 37.5 33.3% 95.3%;
+  --sidebar-accent: 36.9 25.5% 90.0%;
   --sidebar-accent-foreground: 20 33.3% 3.5%;
-  --sidebar-ring: 20 33.3% 3.5%;
+  --sidebar-ring: 34.3 18.9% 7.3%;
 
-  --popover: 60 9.1% 97.8%;
-  --popover-foreground: 20 33.3% 3.5%;
-  --popover-border: 50 7.9% 85.1%;
+  --popover: 37.5 33.3% 95.3%;
+  --popover-foreground: 34.3 18.9% 7.3%;
+  --popover-border: 38.2 22.9% 81.2%;
 
   /* Primary = ink fill with paper text */
-  --primary: 20 33.3% 3.5%;
-  --primary-foreground: 60 9.1% 97.8%;
+  --primary: 34.3 18.9% 7.3%;
+  --primary-foreground: 37.5 33.3% 95.3%;
 
   /* Secondary = hairline border, no fill (paper) */
-  --secondary: 60 9.1% 97.8%;
-  --secondary-foreground: 20 33.3% 3.5%;
+  --secondary: 37.5 33.3% 95.3%;
+  --secondary-foreground: 34.3 18.9% 7.3%;
 
-  --muted: 45 12.5% 93.7%;              /* #f1f0ed raised panels */
-  --muted-foreground: 24 8.9% 33.1%;    /* #5c534d secondary text */
+  --muted: 36.9 25.5% 90.0%;              /* #f1f0ed raised panels */
+  --muted-foreground: 33.0 10.3% 38.0%;    /* #5c534d secondary text */
 
-  --accent: 45 12.5% 93.7%;
-  --accent-foreground: 20 33.3% 3.5%;
+  --accent: 36.9 25.5% 90.0%;
+  --accent-foreground: 34.3 18.9% 7.3%;
 
   /* Semantic error colour kept */
-  --destructive: 0 84% 60%;
+  --destructive: 6.7 55.8% 40.8%;
   --destructive-foreground: 210 40% 98%;
 
   /* Signal green: live/status and success accents only */
-  --signal: 147.7 54.6% 38%;            /* #2c965d */
+  --signal: 125.5 18.2% 35.5%;            /* #2c965d */
 
-  --chart-1: 20 33.3% 3.5%;
-  --chart-2: 147.7 54.6% 38%;
-  --chart-3: 24 8.9% 33.1%;
+  --brass: 39.2 45.6% 44.7%;
+
+  --chart-1: 34.3 18.9% 7.3%;
+  --chart-2: 125.5 18.2% 35.5%;
+  --chart-3: 33.0 10.3% 38.0%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
 
   --app-font-sans: 'Instrument Sans', sans-serif;
-  --app-font-serif: Georgia, serif;
+  --app-font-serif: 'Fraunces', Georgia, serif;
   --app-font-mono: 'JetBrains Mono', monospace;
 
   --radius: .5rem;
@@ -164,6 +169,7 @@
   --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --brass-border: hsl(from hsl(var(--brass)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
 @layer base {
@@ -172,6 +178,7 @@
   }
   /* Display headings: Instrument Sans, regular weight, tight tracking */
   h1, h2 {
+    @apply font-serif;
     letter-spacing: -0.02em;
   }
   body {
