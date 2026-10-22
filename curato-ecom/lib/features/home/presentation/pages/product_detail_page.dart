@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curato_user/core/widgets/curato_layout.dart';
 import 'package:curato_user/core/widgets/centered_content.dart';
+import 'package:curato_user/core/theme/app_button_styles.dart';
 import 'package:curato_user/features/home/domain/models/product_model.dart';
 import 'package:curato_user/core/controllers/home_controller.dart';
 import 'package:curato_user/features/home/presentation/widgets/product_card.dart';
@@ -488,7 +489,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         }
                       }
                     : null,
-                selectedColor: AppColors.primaryPink,
+                selectedColor: AppColors.brass,
                 backgroundColor: isValid ? AppColors.grey100 : AppColors.grey200,
                 side: BorderSide(
                   color: isSelected
@@ -546,7 +547,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         }
                       }
                     : null,
-                selectedColor: AppColors.primaryPink,
+                selectedColor: AppColors.brass,
                 backgroundColor: isValid ? AppColors.grey100 : AppColors.grey200,
                 side: BorderSide(
                   color: isSelected
@@ -604,7 +605,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         }
                       }
                     : null,
-                selectedColor: AppColors.primaryPink,
+                selectedColor: AppColors.brass,
                 backgroundColor: isValid ? AppColors.grey100 : AppColors.grey200,
                 side: BorderSide(
                   color: isSelected
@@ -657,7 +658,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     });
                   }
                 },
-                selectedColor: AppColors.primaryPink,
+                selectedColor: AppColors.brass,
                 backgroundColor: AppColors.grey100,
                 side: BorderSide(
                   color: isSelected ? AppColors.transparent : AppColors.grey300,
@@ -696,7 +697,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             hideNavigation: false,
             child: const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryPink),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.foreground),
               ),
             ),
           );
@@ -717,7 +718,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     const Icon(
                       Icons.error_outline,
                       size: 60,
-                      color: AppColors.errorRed,
+                      color: AppColors.oxide,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -732,7 +733,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ElevatedButton(
                       onPressed: _fetchProductDetails,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryPink,
+                        backgroundColor: AppColors.foreground,
                       ),
                       child: const Text(
                         'Retry',
@@ -905,7 +906,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: isSelected
-                                  ? AppColors.primaryPink
+                                  ? AppColors.brass
                                   : AppColors.grey300,
                               width: isSelected ? 2 : 1,
                             ),
@@ -971,7 +972,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.primaryPink
+                            ? AppColors.brass
                             : AppColors.grey300,
                         width: isSelected ? 2 : 1,
                       ),
@@ -1040,7 +1041,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               style: GoogleFonts.instrumentSans(
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
-                color: AppColors.primaryPink,
+                color: AppColors.brass,
               ),
             ),
             Builder(
@@ -1070,7 +1071,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.red50,
+                        color: AppColors.oxide,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1078,7 +1079,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         style: GoogleFonts.instrumentSans(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.errorRed,
+                          color: AppColors.white,
                         ),
                       ),
                     ),
@@ -1101,12 +1102,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _currentStock <= 0 ? AppColors.grey : AppColors.foreground,
-                    foregroundColor: AppColors.white,
-                    shape: const StadiumBorder(),
-                    elevation: 0,
-                    minimumSize: Size(6.w, 6.h)
+                  style: AppButtonStyles.brassOutline().copyWith(
+                    minimumSize: WidgetStatePropertyAll(Size(6.w, 6.h)),
                   ),
                 ),
                   
@@ -1370,7 +1367,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       width: 6,
                       height: 6,
                       decoration: const BoxDecoration(
-                        color: AppColors.primaryPink,
+                        color: AppColors.foreground,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -1543,12 +1540,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _currentStock <= 0 ? AppColors.grey : AppColors.primaryPink,
-                        foregroundColor: AppColors.white,
-                        shape: const StadiumBorder(),
-                        elevation: 0,
-                      ),
+                      style: AppButtonStyles.inkOutline(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1568,12 +1560,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _currentStock <= 0 ? AppColors.grey : AppColors.foreground,
-                        foregroundColor: AppColors.white,
-                        shape: const StadiumBorder(),
-                        elevation: 0,
-                      ),
+                      style: AppButtonStyles.brassOutline(),
                     ),
                   ),
                
@@ -1594,12 +1581,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _currentStock <= 0 ? AppColors.grey : AppColors.primaryPink,
-                          foregroundColor: AppColors.white,
-                          shape: const StadiumBorder(),
-                          elevation: 0,
-                        ),
+                        style: AppButtonStyles.inkOutline(),
                       ),
                     ),
                   ),
@@ -1620,12 +1602,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _currentStock <= 0 ? AppColors.grey : AppColors.foreground,
-                          foregroundColor: AppColors.white,
-                          shape: const StadiumBorder(),
-                          elevation: 0,
-                        ),
+                        style: AppButtonStyles.brassOutline(),
                       ),
                     ),
                   ),
@@ -1703,7 +1680,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     });
                   }
                 },
-                selectedColor: AppColors.primaryPink,
+                selectedColor: AppColors.brass,
                 backgroundColor: AppColors.grey100,
                 side: BorderSide(
                   color: isSelected ? AppColors.transparent : AppColors.grey300,
@@ -1761,7 +1738,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                               });
                             }
                           },
-                          selectedColor: AppColors.primaryPink,
+                          selectedColor: AppColors.brass,
                           backgroundColor: AppColors.grey100,
                           side: BorderSide(
                             color: isSelected ? AppColors.transparent : AppColors.grey300,
@@ -1821,7 +1798,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                               });
                             }
                           },
-                          selectedColor: AppColors.primaryPink,
+                          selectedColor: AppColors.brass,
                           backgroundColor: AppColors.grey100,
                           side: BorderSide(
                             color: isSelected ? AppColors.transparent : AppColors.grey300,
@@ -1894,7 +1871,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     _updateSelectedVariation();
                   }
                 },
-                selectedColor: AppColors.primaryPink,
+                selectedColor: AppColors.brass,
                 backgroundColor: AppColors.grey100,
                 side: BorderSide(
                   color: isSelected ? AppColors.transparent : AppColors.grey300,
@@ -2005,7 +1982,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 width: 6,
                 height: 6,
                 decoration: const BoxDecoration(
-                  color: AppColors.primaryPink,
+                  color: AppColors.foreground,
                   shape: BoxShape.circle,
                 ),
               ),
