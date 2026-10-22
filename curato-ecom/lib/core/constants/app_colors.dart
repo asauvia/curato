@@ -149,16 +149,16 @@ class AppColors {
   static const Color green900 = Color(0xFF1B5E20);
 
   // Info/blue shades now map to the warm palette
-  static const Color blue50 = Color(0xFFF1F0ED);
-  static const Color blue100 = Color(0xFFDCDBD6);
-  static const Color blue200 = Color(0xFFDCDBD6);
+  static const Color blue50 = Color(0xFFECE7DF);
+  static const Color blue100 = Color(0xFFDAD2C4);
+  static const Color blue200 = Color(0xFFDAD2C4);
   static const Color blue300 = Color(0xFF8C857E);
-  static const Color blue400 = Color(0xFF5C534D);
-  static const Color blue500 = Color(0xFF0C0806);
-  static const Color blue600 = Color(0xFF0C0806);
-  static const Color blue700 = Color(0xFF0C0806);
-  static const Color blue800 = Color(0xFF0C0806);
-  static const Color blue900 = Color(0xFF0C0806);
+  static const Color blue400 = Color(0xFF6B6257);
+  static const Color blue500 = Color(0xFF16130F);
+  static const Color blue600 = Color(0xFF16130F);
+  static const Color blue700 = Color(0xFF16130F);
+  static const Color blue800 = Color(0xFF16130F);
+  static const Color blue900 = Color(0xFF16130F);
 
   // Opacity Constants
   static const Color white24 = Color(0x3DFFFFFF);

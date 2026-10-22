@@ -30,7 +30,7 @@
   --shadow: none;
 
   --sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --heading: 'Fraunces', Georgia, system-ui, serif;
+  --heading: 'Fraunces', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
 
   font: 16px/145% var(--sans);

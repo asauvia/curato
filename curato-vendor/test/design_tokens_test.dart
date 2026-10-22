@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:curato_vendor/core/constants/app_colors.dart';
 import 'package:curato_vendor/core/theme/app_theme.dart';
 
 void main() {
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   test('design tokens use the modern-luxury-showroom palette', () {
     expect(AppColors.primary, const Color(0xFF16130F));
     expect(AppColors.secondary, const Color(0xFF6B6257));

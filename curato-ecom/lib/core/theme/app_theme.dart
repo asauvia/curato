@@ -18,6 +18,8 @@ class AppTheme {
       onPrimary: AppColors.background,
       secondary: AppColors.foreground,
       outline: AppColors.border,
+      error: AppColors.oxide,
+      onError: AppColors.background,
     ),
     textTheme: GoogleFonts.instrumentSansTextTheme()
         .apply(bodyColor: AppColors.textPrimary, displayColor: AppColors.textPrimary)
